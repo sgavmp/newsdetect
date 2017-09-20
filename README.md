@@ -1,0 +1,2 @@
+# newsdetect
+NewsDetect project
