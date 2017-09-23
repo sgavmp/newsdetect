@@ -25,7 +25,7 @@
 	</properties>
 
 	<modules>
-		<module>newsdetect-main</module>
+		<module>newsdetect-com.ikip.newsdetect.main</module>
 		<module>newsdetect-model</module>
 		<module>newsdetect-template</module>
 		<module>newsdetect-static</module>
