@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:th="http://www.thymeleaf.org">
+<head th:include="base :: head">
+</head>
+<body>
+	<style>
+	article { width: auto; max-width: 500px; text-align:center; margin:0px auto; padding: 0px; }
+  </style>
+	<article>
+		<h1><span th:text="${fourhundred1}">Internal Server Error</span></h1>
+			<p><span th:text="${fourhundred2}">Sorry, but there is a problem with the resource you are looking for, and it cannot be displayed.</span></p>
+					<p th:if="${message}" th:text="${message}"></p>
+	</article>
+</body>
+</html>

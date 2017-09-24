@@ -1,0 +1,891 @@
+<!DOCTYPE html>
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml"
+	xmlns:th="http://www.thymeleaf.org">
+<head th:include="base :: head">
+</head>
+<body>
+	<div
+		class="demo-layout mdl-layout mdl-js-layout mdl-layout--fixed-drawer mdl-layout--fixed-header">
+		<header
+			class="demo-header mdl-layout__header mdl-color--white mdl-color--grey-100 mdl-color-text--grey-600"
+			th:replace="base :: menu-superior"> </header>
+		<div
+			class="demo-drawer mdl-layout__drawer mdl-color--blue-grey-800 mdl-color-text--primary"
+			th:include="base :: menu-izquierdo"></div>
+		<main
+			class="mdl-layout__content mdl-color--withe mdl-typography--text-center">
+		<div class="mdl-grid">
+			<div class="mdl-cell mdl-cell--12-col mdl-card mdl-shadow--3dp">
+				<div class="mdl-card__title mdl-color--primary">
+					<h2 class="mdl-card__title-text  mdl-color-text--white"
+						th:inline="text">[[${alert.title}]]</h2>
+				</div>
+				<div sec:authorize="isAuthenticated()"
+					class="mdl-card__actions mdl-card--border">
+					<a
+						class="confirm-del mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect"
+						th:href="@{/{folder}/get/{id}/remove(folder=${folder},id=${alert.id})}">
+						<span th:text="${alertborrar}">Borrar</span> </a> <a
+						class="confirm-reset mdl-button mdl-button--colored mdl-js-button mdl-js-ripple-effect"
+						th:href="@{/{folder}/get/{id}/reset(folder=${folder},id=${alert.id})}">
+						<span th:text="${alertreset}">Reset</span> </a>
+				</div>
+			</div>
+		</div>
+
+		<div class="mdl-grid">
+			<div class="mdl-cell mdl-cell--8-col mdl-cell--2-offset mdl-shadow--3dp">
+				<div id="container"></div>
+			</div>
+		</div>
+
+		<div class="mdl-tabs mdl-js-tabs mdl-js-ripple-effect">
+			<div class="mdl-tabs__tab-bar">
+				<a href="#active-panel" class="mdl-tabs__tab is-active"><span th:text="${alertactive}">Activas</span></a>
+				<a href="#history-panel" class="mdl-tabs__tab"><span th:text="${alerthistorial}">Historial</span></a> <a
+					href="#false-panel" class="mdl-tabs__tab"><span th:text="${alertfalsepositive}">Falsos positivos</span></a>
+			</div>
+
+			<div class="mdl-tabs__panel is-active" id="active-panel">
+				<div th:each="day : ${alertActive.getAllNewsDetectOrderByDate()}">
+					<h2
+						th:if="${#dates.format(hoy, 'dd/MM/yyyy')==#dates.format(day.key, 'dd/MM/yyyy')}"><span th:text="${alerttoday}">Hoy</span></h2>
+					<h2
+						th:if="${#dates.format(ayer, 'dd/MM/yyyy')==#dates.format(day.key, 'dd/MM/yyyy')}"><span th:text="${alertyesterday}">Ayer</span></h2>
+					<h2
+						th:unless="${#dates.format(hoy, 'dd/MM/yyyy')==#dates.format(day.key, 'dd/MM/yyyy') or #dates.format(ayer, 'dd/MM/yyyy')==#dates.format(day.key, 'dd/MM/yyyy')}"
+						th:text="${#dates.format(day.key, 'dd/MM/yyyy')}">Fecha</h2>
+
+					<table class="mdl-data-table mdl-js-data-table snippet">
+						<thead>
+							<tr>
+								<th class="mdl-data-table__cell--non-numeric" th:text="${alertnewst}">Nombre</th>
+								<th class="mdl-data-table__cell--non-numeric" th:text="${alertsite}">Sitio</th>
+								<th class="mdl-data-table__cell--non-numeric" th:text="${alertfinalscore}">Score</th>
+								<th class="mdl-data-table__cell--non-numeric" th:text="${alertinitialscore}">Base Score</th>
+								<th class="mdl-data-table__cell--non-numeric" th:text="${alertlocation}">Proveedores Afctados</th>
+								<th class="mdl-data-table__cell--non-numeric"></th>
+								<th class="mdl-data-table__cell--non-numeric"></th>
+								<th class="mdl-data-table__cell--non-numeric"></th>		
+							</tr>
+						</thead>
+						<tbody>
+							<tr th:each="news : ${day.value}">
+								<td th:if="${#strings.length(news.title)>30}" class="mdl-data-table__cell--non-numeric" th:inline="text">
+									<a th:id="${news.id}" target="_blank" th:href="${news.link}"
+											href="http://www.google.es">[[${#strings.substring(news.title,0,30)}]]...</a>
+											
+									<div class="mdl-tooltip" th:for="${news.id}" th:inline="text">
+										[[${news.link}]]</div>
+								</td>
+								
+								<td th:unless="${#strings.length(news.title)>30}" class="mdl-data-table__cell--non-numeric" th:inline="text">
+									<a th:id="${news.id}" target="_blank" th:href="${news.link}"
+											href="http://www.google.es">[[${news.title}]]...</a>
+											
+									<div class="mdl-tooltip" th:for="${news.id}" th:inline="text">
+										[[${news.link}]]</div>
+								</td>
+								
+								<td th:if="${news.site}" class="mdl-data-table__cell--non-numeric" >
+									<span th:if="${#strings.length(news.site.name)>30}" class="mdl-color-text--primary" th:inline="text">[[${#strings.substring(news.site.name,0,30)}]]...</span>
+									<span th:unless="${#strings.length(news.site.name)>30}" class="mdl-color-text--primary" th:inline="text">[[${news.site.name}]]</span>
+								</td>
+								<td th:unless="${news.site}" class="mdl-data-table__cell--non-numeric" th:inline="text">X
+								</td>
+								
+								<td th:if="${news.score}" class="mdl-data-table__cell--non-numeric" >
+									<span th:if="${#strings.length(news.score)>30}" class="mdl-color-text--primary" th:inline="text">[[${#strings.substring(news.score,0,30)}]]...</span>
+									<span th:unless="${#strings.length(news.score)>30}" class="mdl-color-text--primary" th:inline="text">[[${news.score}]]</span>
+								</td>
+								<td th:unless="${news.score}" class="mdl-data-table__cell--non-numeric" th:inline="text">0
+								</td>
+								
+								<td th:if="${news.scoreLucene}" class="mdl-data-table__cell--non-numeric" >
+									<span th:if="${#strings.length(news.scoreLucene)>30}" class="mdl-color-text--primary" th:inline="text">[[${#strings.substring(news.scoreLucene,0,30)}]]...</span>
+									<span th:unless="${#strings.length(news.scoreLucene)>30}" class="mdl-color-text--primary" th:inline="text">[[${news.scoreLucene}]]</span>
+								</td>
+								<td th:unless="${news.scoreLucene}" class="mdl-data-table__cell--non-numeric" th:inline="text">0
+								</td>
+								
+								<td th:if="${news.location != null and news.location.size()>0}" class="mdl-data-table__cell--non-numeric" >
+									<span th:if="${#strings.length(news.location)>30}" class="mdl-color-text--primary" th:inline="text">[[${#strings.substring(news.location,0,30)}]]...</span>
+									<span th:unless="${#strings.length(news.location)>30}" class="mdl-color-text--primary" th:inline="text">[[${news.location}]]</span>
+								</td>
+								<td th:unless="${news.location != null and news.location.size() >0}" class="mdl-data-table__cell--non-numeric" th:inline="text">0
+								</td>
+								
+								<td th:id="${news.id}+d" class="mdl-data-table__cell--non-numeric center">
+									<a class="nounder confirm-del material-icons"
+									th:href="@{/{folder}/get/{id}/news/{idNews}/remove (folder=${folder},id=${alert.id},idNews=${news.id})}">
+									delete_forever </a>
+								</td>
+								
+								<div class="mdl-tooltip" th:for="${news.id}+d" th:text="${alertdeletealertone}">
+										deletemesage</div>
+								
+								<td th:id="${news.id}+a" class="mdl-data-table__cell--non-numeric center">
+									<a class="nounder confirm-active material-icons"
+									th:href="@{/{folder}/get/{id}/news/{idNews}/active (folder=${folder},id=${alert.id},idNews=${news.id})}">
+									assignment_late </a>
+								</td>
+								
+								<div class="mdl-tooltip" th:for="${news.id}+a" th:text="${alertmarkactive}">
+										activemessage</div>
+								
+								
+								<td th:id="${news.id}+p" class="mdl-data-table__cell--non-numeric center">
+									<a class="nounder confirm-history material-icons"
+									th:href="@{/{folder}/get/{id}/news/{idNews}/history (folder=${folder},id=${alert.id},idNews=${news.id})}">
+									assignment_return </a>
+								</td>
+								
+								<div class="mdl-tooltip" th:for="${news.id}+p"  th:text="${alertmarkaspass}">
+										passssage</div>
+	
+								
+								
+								
+							</tr>
+						</tbody>
+					</table>
+					
+				
+					
+				</div>
+			</div>
+			 
+			 
+			<div class="mdl-tabs__panel" id="history-panel">
+				<div th:each="day : ${alertHistory.getAllNewsDetectOrderByDate()}">
+					<span
+						th:if="${#dates.format(hoy, 'dd/MM/yyyy')==#dates.format(day.key, 'dd/MM/yyyy')}"><span th:text="${alerttoday}">Hoy</span></span>
+					<span
+						th:if="${#dates.format(ayer, 'dd/MM/yyyy')==#dates.format(day.key, 'dd/MM/yyyy')}"><span th:text="${alertyesterday}">Ayer</span></span>
+					<span
+						th:unless="${#dates.format(hoy, 'dd/MM/yyyy')==#dates.format(day.key, 'dd/MM/yyyy') or #dates.format(ayer, 'dd/MM/yyyy')==#dates.format(day.key, 'dd/MM/yyyy')}"
+						th:text="${#dates.format(day.key, 'dd/MM/yyyy')}">Fecha</span>
+
+
+					<table class="mdl-data-table mdl-js-data-table snippet">
+						<thead>
+							<tr>
+								<th class="mdl-data-table__cell--non-numeric" th:text="${alertnewst}">Nombre</th>
+								<th class="mdl-data-table__cell--non-numeric" th:text="${alertsite}">Sitio</th>
+								<th class="mdl-data-table__cell--non-numeric" th:text="${alertfinalscore}">Score</th>
+								<th class="mdl-data-table__cell--non-numeric" th:text="${alertinitialscore}">Base Score</th>
+								<th class="mdl-data-table__cell--non-numeric" th:text="${alertlocation}">Proveedores Afctados</th>
+								<th class="mdl-data-table__cell--non-numeric" ></th>
+								<th class="mdl-data-table__cell--non-numeric" ></th>
+								<th class="mdl-data-table__cell--non-numeric" ></th>		
+							</tr>
+						</thead>
+						<tbody>
+							<tr th:each="news : ${day.value}">
+								<td th:if="${#strings.length(news.title)>30}" class="mdl-data-table__cell--non-numeric" th:inline="text">
+									<a th:id="${news.id}" target="_blank" th:href="${news.link}"
+											href="http://www.google.es">[[${#strings.substring(news.title,0,30)}]]...</a>
+											
+									<div class="mdl-tooltip" th:for="${news.id}" th:inline="text">
+										[[${news.link}]]</div>
+								</td>
+								
+								<td th:unless="${#strings.length(news.title)>30}" class="mdl-data-table__cell--non-numeric" th:inline="text">
+									<a th:id="${news.id}" target="_blank" th:href="${news.link}"
+											href="http://www.google.es">[[${news.title}]]...</a>
+											
+									<div class="mdl-tooltip" th:for="${news.id}" th:inline="text">
+										[[${news.link}]]</div>
+								</td>
+								
+								<td th:if="${news.site}" class="mdl-data-table__cell--non-numeric" >
+									<span th:if="${#strings.length(news.site.name)>30}" class="mdl-color-text--primary" th:inline="text">[[${#strings.substring(news.site.name,0,30)}]]...</span>
+									<span th:unless="${#strings.length(news.site.name)>30}" class="mdl-color-text--primary" th:inline="text">[[${news.site.name}]]</span>
+								</td>
+								<td th:unless="${news.site}" class="mdl-data-table__cell--non-numeric" th:inline="text">X
+								</td>
+								
+								<td th:if="${news.score}" class="mdl-data-table__cell--non-numeric" >
+									<span th:if="${#strings.length(news.score)>30}" class="mdl-color-text--primary" th:inline="text">[[${#strings.substring(news.score,0,30)}]]...</span>
+									<span th:unless="${#strings.length(news.score)>30}" class="mdl-color-text--primary" th:inline="text">[[${news.score}]]</span>
+								</td>
+								<td th:unless="${news.score}" class="mdl-data-table__cell--non-numeric" th:inline="text">0
+								</td>
+								
+								<td th:if="${news.scoreLucene}" class="mdl-data-table__cell--non-numeric" >
+									<span th:if="${#strings.length(news.scoreLucene)>30}" class="mdl-color-text--primary" th:inline="text">[[${#strings.substring(news.scoreLucene,0,30)}]]...</span>
+									<span th:unless="${#strings.length(news.scoreLucene)>30}" class="mdl-color-text--primary" th:inline="text">[[${news.scoreLucene}]]</span>
+								</td>
+								<td th:unless="${news.scoreLucene}" class="mdl-data-table__cell--non-numeric" th:inline="text">0
+								</td>
+								
+								<td th:if="${news.location != null and news.location.size()>0}" class="mdl-data-table__cell--non-numeric" >
+									<span th:if="${#strings.length(news.location)>30}" class="mdl-color-text--primary" th:inline="text">[[${#strings.substring(news.location,0,30)}]]...</span>
+									<span th:unless="${#strings.length(news.location)>30}" class="mdl-color-text--primary" th:inline="text">[[${news.location}]]</span>
+								</td>
+								<td th:unless="${news.location != null and news.location.size() >0}" class="mdl-data-table__cell--non-numeric" th:inline="text">0
+								</td>
+								
+								<td th:id="${news.id}+d" class="mdl-data-table__cell--non-numeric center">
+									<a class="nounder confirm-del material-icons"
+									th:href="@{/{folder}/get/{id}/news/{idNews}/remove (folder=${folder},id=${alert.id},idNews=${news.id})}">
+									delete_forever </a>
+								</td>
+								
+								<div class="mdl-tooltip" th:for="${news.id}+d" th:text="${alertdeletealertone}">
+										deletemesage</div>
+								
+								<td th:id="${news.id}+a" class="mdl-data-table__cell--non-numeric center">
+									<a class="nounder confirm-active material-icons"
+									th:href="@{/{folder}/get/{id}/news/{idNews}/active (folder=${folder},id=${alert.id},idNews=${news.id})}">
+									assignment_late </a>
+								</td>
+								
+								<div class="mdl-tooltip" th:for="${news.id}+a" th:text="${alertmarkactive}">
+										activemessage</div>
+								
+								
+								<td th:id="${news.id}+p" class="mdl-data-table__cell--non-numeric center">
+									<a class="nounder confirm-history material-icons"
+									th:href="@{/{folder}/get/{id}/news/{idNews}/history (folder=${folder},id=${alert.id},idNews=${news.id})}">
+									assignment_return </a>
+								</td>
+								
+								<div class="mdl-tooltip" th:for="${news.id}+p"  th:text="${alertmarkaspass}">
+										passssage</div>
+	
+								
+								
+								
+							</tr>
+						</tbody>
+					</table>
+
+
+				</div>
+			</div>
+			
+
+			<div class="mdl-tabs__panel" id="false-panel">
+				<div th:each="day : ${alertFalse.getAllNewsDetectOrderByDate()}">
+					<span
+						th:if="${#dates.format(hoy, 'dd/MM/yyyy')==#dates.format(day.key, 'dd/MM/yyyy')}"><span th:text="${alerttoday}">Hoy</span></span>
+					<span
+						th:if="${#dates.format(ayer, 'dd/MM/yyyy')==#dates.format(day.key, 'dd/MM/yyyy')}"><span th:text="${alertyesterday}">Ayer</span></span>
+					<span
+						th:unless="${#dates.format(hoy, 'dd/MM/yyyy')==#dates.format(day.key, 'dd/MM/yyyy') or #dates.format(ayer, 'dd/MM/yyyy')==#dates.format(day.key, 'dd/MM/yyyy')}"
+						th:text="${#dates.format(day.key, 'dd/MM/yyyy')}">Fecha</span>
+
+
+					<table class="mdl-data-table mdl-js-data-table snippet">
+						<thead>
+							<tr>
+								<th class="mdl-data-table__cell--non-numeric" th:text="${alertnewst}">Nombre</th>
+								<th class="mdl-data-table__cell--non-numeric" th:text="${alertsite}">Sitio</th>
+								<th class="mdl-data-table__cell--non-numeric" th:text="${alertfinalscore}">Score</th>
+								<th class="mdl-data-table__cell--non-numeric" th:text="${alertinitialscore}">Base Score</th>
+								<th class="mdl-data-table__cell--non-numeric" th:text="${alertlocation}">Proveedores Afctados</th>
+								<th class="mdl-data-table__cell--non-numeric" ></th>
+								<th class="mdl-data-table__cell--non-numeric" ></th>
+								<th class="mdl-data-table__cell--non-numeric" ></th>		
+							</tr>
+						</thead>
+						<tbody>
+							<tr th:each="news : ${day.value}">
+								<td th:if="${#strings.length(news.title)>30}" class="mdl-data-table__cell--non-numeric" th:inline="text">
+									<a th:id="${news.id}" target="_blank" th:href="${news.link}"
+											href="http://www.google.es">[[${#strings.substring(news.title,0,30)}]]...</a>
+											
+									
+								</td>
+								
+								<div class="mdl-tooltip" th:for="${news.id}" th:inline="text">
+										[[${news.link}]]</div>
+								
+								<td th:unless="${#strings.length(news.title)>30}" class="mdl-data-table__cell--non-numeric" th:inline="text">
+									<a th:id="${news.id}" target="_blank" th:href="${news.link}"
+											href="http://www.google.es">[[${news.title}]]...</a>
+											
+									<div class="mdl-tooltip" th:for="${news.id}" th:inline="text">
+										[[${news.link}]]</div>
+								</td>
+								
+								<td th:if="${news.site}" class="mdl-data-table__cell--non-numeric" >
+									<span th:if="${#strings.length(news.site.name)>30}" class="mdl-color-text--primary" th:inline="text">[[${#strings.substring(news.site.name,0,30)}]]...</span>
+									<span th:unless="${#strings.length(news.site.name)>30}" class="mdl-color-text--primary" th:inline="text">[[${news.site.name}]]</span>
+								</td>
+								<td th:unless="${news.site}" class="mdl-data-table__cell--non-numeric" th:inline="text">X
+								</td>
+								
+								<td th:if="${news.score}" class="mdl-data-table__cell--non-numeric" >
+									<span th:if="${#strings.length(news.score)>30}" class="mdl-color-text--primary" th:inline="text">[[${#strings.substring(news.score,0,30)}]]...</span>
+									<span th:unless="${#strings.length(news.score)>30}" class="mdl-color-text--primary" th:inline="text">[[${news.score}]]</span>
+								</td>
+								<td th:unless="${news.score}" class="mdl-data-table__cell--non-numeric" th:inline="text">0
+								</td>
+								
+								<td th:if="${news.scoreLucene}" class="mdl-data-table__cell--non-numeric" >
+									<span th:if="${#strings.length(news.scoreLucene)>30}" class="mdl-color-text--primary" th:inline="text">[[${#strings.substring(news.scoreLucene,0,30)}]]...</span>
+									<span th:unless="${#strings.length(news.scoreLucene)>30}" class="mdl-color-text--primary" th:inline="text">[[${news.scoreLucene}]]</span>
+								</td>
+								<td th:unless="${news.scoreLucene}" class="mdl-data-table__cell--non-numeric" th:inline="text">0
+								</td>
+								
+								<td th:if="${news.location != null and news.location.size()>0}" class="mdl-data-table__cell--non-numeric" >
+									<span th:if="${#strings.length(news.location)>30}" class="mdl-color-text--primary" th:inline="text">[[${#strings.substring(news.location,0,30)}]]...</span>
+									<span th:unless="${#strings.length(news.location)>30}" class="mdl-color-text--primary" th:inline="text">[[${news.location}]]</span>
+								</td>
+								<td th:unless="${news.location != null and news.location.size() >0}" class="mdl-data-table__cell--non-numeric" th:inline="text">0
+								</td>
+								
+								<td th:id="${news.id}+d" class="mdl-data-table__cell--non-numeric center">
+									<a class="nounder confirm-del material-icons"
+									th:href="@{/{folder}/get/{id}/news/{idNews}/remove (folder=${folder},id=${alert.id},idNews=${news.id})}">
+									delete_forever </a>
+								</td>
+								
+								<div class="mdl-tooltip" th:for="${news.id}+d" th:text="${alertdeletealertone}">
+										deletemesage</div>
+								
+								<td th:id="${news.id}+a" class="mdl-data-table__cell--non-numeric center">
+									<a class="nounder confirm-active material-icons"
+									th:href="@{/{folder}/get/{id}/news/{idNews}/active (folder=${folder},id=${alert.id},idNews=${news.id})}">
+									assignment_late </a>
+								</td>
+								
+								<div class="mdl-tooltip" th:for="${news.id}+a" th:text="${alertmarkactive}">
+										activemessage</div>
+								
+								
+								<td th:id="${news.id}+p" class="mdl-data-table__cell--non-numeric center">
+									<a class="nounder confirm-history material-icons"
+									th:href="@{/{folder}/get/{id}/news/{idNews}/history (folder=${folder},id=${alert.id},idNews=${news.id})}">
+									assignment_return </a>
+								</td>
+								
+								<div class="mdl-tooltip" th:for="${news.id}+p"  th:text="${alertmarkaspass}">
+										passssage</div>
+	
+								
+								
+								
+							</tr>
+						</tbody>
+					</table>
+
+ 
+				</div>
+			</div>
+
+		</div>
+		</main>
+		<footer th:include="base :: footer"> </footer>
+		<script src="http://code.highcharts.com/highcharts-more.js"></script>
+		<script th:inline="javascript">
+			/* <![CDATA[ */
+			$(".confirm-del")
+					.click(
+							function(e) {
+								var notification = document
+										.querySelector('.mdl-js-snackbar');
+								var url = e
+										&& (('string' === typeof e && e) || (e.currentTarget && e.currentTarget.attributes['href'].value));
+								notification.MaterialSnackbar
+										.showSnackbar({
+											message : /*[[${alertsuredelete}]]*/ '¿Estas seguro de borrar la alerta seleccionada?',
+											cssColor : 'mdl-color--green',
+											timeout : 300000,
+											actionHandler : function(event) {
+												window.location = url;
+												notification.MaterialSnackbar
+														.cleanup_();
+											},
+											actionText : /*[[${yes}]]*/ 'Si',
+											actionHandler2 : function(event) {
+												notification.MaterialSnackbar
+														.cleanup_();
+											},
+											actionText2 : /*[[${no}]]*/ 'No'
+										});
+								return false;
+							});
+			$(".confirm-active")
+					.click(
+							function(e) {
+								var notification = document
+										.querySelector('.mdl-js-snackbar');
+								var url = e
+										&& (('string' === typeof e && e) || (e.currentTarget && e.currentTarget.attributes['href'].value));
+								notification.MaterialSnackbar
+										.showSnackbar({
+											message : /*[[${alertsureactive}]]*/ '¿Estas seguro de marcar la noticia indicada a activa?',
+											cssColor : 'mdl-color--primary',
+											timeout : 300000,
+											actionHandler : function(event) {
+												window.location = url;
+												notification.MaterialSnackbar
+														.cleanup_();
+											},
+											actionText : /*[[${yes}]]*/ 'Si',
+											actionHandler2 : function(event) {
+												notification.MaterialSnackbar
+														.cleanup_();
+											},
+											actionText2 : /*[[${no}]]*/ 'No'
+										});
+								return false;
+							});
+			$(".confirm-history")
+					.click(
+							function(e) {
+								var notification = document
+										.querySelector('.mdl-js-snackbar');
+								var url = e
+										&& (('string' === typeof e && e) || (e.currentTarget && e.currentTarget.attributes['href'].value));
+								notification.MaterialSnackbar
+										.showSnackbar({
+											message : /*[[${alertsurepass}]]*/ '¿Estas seguro de marcar la noticia como pasada?',
+											cssColor : 'mdl-color--primary',
+											timeout : 300000,
+											actionHandler : function(event) {
+												window.location = url;
+												notification.MaterialSnackbar
+														.cleanup_();
+											},
+											actionText : /*[[${yes}]]*/ 'Si',
+											actionHandler2 : function(event) {
+												notification.MaterialSnackbar
+														.cleanup_();
+											},
+											actionText2 : /*[[${no}]]*/ 'No',
+										});
+								return false;
+							});
+			$(".confirm-false")
+					.click(
+							function(e) {
+								var notification = document
+										.querySelector('.mdl-js-snackbar');
+								var url = e
+										&& (('string' === typeof e && e) || (e.currentTarget && e.currentTarget.attributes['href'].value));
+								notification.MaterialSnackbar
+										.showSnackbar({
+											message : /*[[${alertsurefalsepositive}]]*/ '¿Estas seguro de marcar la noticia como falso positivo?',
+											cssColor : 'mdl-color--primary',
+											timeout : 300000,
+											actionHandler : function(event) {
+												window.location = url;
+												notification.MaterialSnackbar
+														.cleanup_();
+											},
+											actionText : /*[[${yes}]]*/ 'Si',
+											actionHandler2 : function(event) {
+												notification.MaterialSnackbar
+														.cleanup_();
+											},
+											actionText2 : /*[[${no}]]*/ 'No',
+										});
+								return false;
+							});
+			$(".confirm-res")
+					.click(
+							function(e) {
+								var notification = document
+										.querySelector('.mdl-js-snackbar');
+								var url = e
+										&& (('string' === typeof e && e) || (e.currentTarget && e.currentTarget.attributes['href'].value));
+								notification.MaterialSnackbar
+										.showSnackbar({
+											message : /*[[${alertsureresolvealert}]]*/ '¿Estas seguro de resolver(ocultar) la alerta seleccionada?',
+											cssColor : 'mdl-color--primary',
+											timeout : 300000,
+											actionHandler : function(event) {
+												window.location = url;
+												notification.MaterialSnackbar
+														.cleanup_();
+											},
+											actionText : /*[[${yes}]]*/ 'Si',
+											actionHandler2 : function(event) {
+												notification.MaterialSnackbar
+														.cleanup_();
+											},
+											actionText2 : /*[[${no}]]*/ 'No',
+										});
+								return false;
+							});
+			$(".confirm-reset")
+					.click(
+							function(e) {
+								var notification = document
+										.querySelector('.mdl-js-snackbar');
+								var url = e
+										&& (('string' === typeof e && e) || (e.currentTarget && e.currentTarget.attributes['href'].value));
+								notification.MaterialSnackbar
+										.showSnackbar({
+											message : /*[[${alertsurereset}]]*/ '¿Estas seguro de resetear la alerta seleccionada?Esto eliminará todas las alertas almacenadas y creara nuevas.',
+											cssColor : 'mdl-color--primary',
+											timeout : 300000,
+											actionHandler : function(event) {
+												window.location = url;
+												notification.MaterialSnackbar
+														.cleanup_();
+											},
+											actionText : /*[[${yes}]]*/ 'Si',
+											actionHandler2 : function(event) {
+												notification.MaterialSnackbar
+														.cleanup_();
+											},
+											actionText2 : /*[[${no}]]*/ 'No',
+										});
+								return false;
+							});
+			/* ]]> */
+		</script>
+		<script th:inline="javascript">
+			/* <![CDATA[ */
+		$(function () {
+
+		    // Get the data. The contents of the data file can be viewed at
+		    // https://github.com/highcharts/highcharts/blob/master/samples/data/activity.json
+		    $.getJSON([[@{/{folder}/ajax/stats/{id}(folder=${folder},id=${alert.id})}]], function (activity) {
+		        var data1 = [];
+		        var data2 = [];
+		        var ranges = [];
+		        var averages = [];
+		        var averages2 = [];
+		        var byYear = {};
+		        var seriesByYear = [];
+		        var byYear2 = {};
+		    	$.each(activity, function (i, alert) {
+		    		 //console.log(alert);
+		    		$.each(alert, function (data, values) {
+						data1.push([Date.parse(values[2]),values[3]]);
+						data2.push([Date.parse(values[2]),values[8]]);
+						ranges.push([Date.parse(values[2]),Math.round(values[5]*100)/100,Math.round(values[6]*100)/100]);
+						averages.push([Date.parse(values[2]),Math.round(values[4]*100)/100]);
+						averages2.push([Date.parse(values[2]),Math.round(values[7]*100)/100]);
+		    		});
+		    		
+
+		    		data1 = data1.sort(function(a, b) {
+						return a[0] - b[0];
+					});
+		    		data1.pop();
+		    		
+		    		averages = averages.sort(function(a, b) {
+						return a[0] - b[0];
+					});
+		    		averages.pop();
+		    		data2.pop();
+		    		
+		    		$.each(data1, function (data, values) {
+						var year = new Date(values[0]).getFullYear();
+						var date = new Date(values[0]);
+						date.setFullYear(1970);
+						if (!(year in byYear)) {
+							byYear[year] = [];
+						}
+						byYear[year].push([Date.parse(date),values[1]]);
+		    		});
+		    		$.each(byYear, function (year, values) {
+		    			seriesByYear.push({
+	                        data: values.sort(function(a, b) {
+								return a[0] - b[0];
+							}),
+	                        name: year,
+	                        fillOpacity: 0.3,
+	                    });
+		    		});
+		    		$.each(data2, function (data, values) {
+						var year = new Date(values[0]).getFullYear();
+						var date = new Date(values[0]);
+						date.setFullYear(1970);
+						if (!(year in byYear2)) {
+							byYear2[year] = [];
+						}
+						byYear2[year].push([Date.parse(date),values[1]]);
+		    		});
+		    		$.each(byYear2, function (year, values) {
+		    			seriesByYear.push({
+	                        data: values.sort(function(a, b) {
+								return a[0] - b[0];
+							}),
+	                        name: year+ ' ' + /*[[${alertexpected}]]*/ 'Expected',
+	                        fillOpacity: 0.3,
+	                    });
+		    		});
+		    		 //console.log(seriesByYear);
+/* 		    		 console.log(data2); */
+		        });
+
+		            $('<div class="chart">')
+		                .appendTo('#container')
+		                .highcharts({
+		                    chart: {
+		                        marginLeft: 40, // Keep all charts left aligned
+		                        spacingTop: 20,
+		                        spacingBottom: 20,
+		                        type: 'column'
+		                    },
+		                    title: {
+		                        text: /*[[${alertnalerts}]]*/ 'Nº Alertas',
+		                        align: 'center',
+		                        margin: 0,
+		                        x: 30
+		                    },
+		                    credits: {
+		                        enabled: false
+		                    },
+		                    legend: {
+		                        enabled: false
+		                    },
+		                    xAxis: {
+		                        crosshair: true,
+		                        type : 'datetime',
+								dateTimeLabelFormats : {
+									day : '%d %m %Y',
+								},
+								title : {
+									text : /*[[${alertstaday}]]*/ 'Día'
+								}
+		                    },
+		                    yAxis: {
+		                        title: {
+		                            text: null
+		                        }
+		                    },
+		                    plotOptions: {
+		                        column: {
+		                            pointPadding: 0.2,
+		                            borderWidth: 0
+		                        }
+		                    },
+		                    tooltipe: {
+		                    	
+		                    },
+		                    series: [{
+		                        data: data1.sort(function(a, b) {
+									return a[0] - b[0];
+								}),
+		                        name: /*[[${alertreal}]]*/ 'Real',
+		                    },{
+		                        data: data2.sort(function(a, b) {
+									return a[0] - b[0];
+								}),
+								type: 'spline',
+								 color: 'orange',
+		                        name: /*[[${alertexpected}]]*/ 'Expected',
+		                        marker: {
+		                            fillColor: 'orange',
+		                            lineWidth: 2,
+		                        }
+		                    }
+		                    ]
+		                });
+		            
+		            $('<div class="chart">')
+	                .appendTo('#container')
+	                .highcharts({
+	                    chart: {
+	                        marginLeft: 40, // Keep all charts left aligned
+	                        spacingTop: 20,
+	                        spacingBottom: 20
+	                    },
+	                    title: {
+	                        text: /*[[${alertstascore}]]*/ 'Score',
+	                        align: 'center',
+	                        margin: 0,
+	                        x: 30
+	                    },
+	                    credits: {
+	                        enabled: false
+	                    },
+	                    legend: {
+	                        enabled: true
+	                    },
+	                    xAxis: {
+	                        crosshair: true,
+							title : {
+								text : /*[[${alertstaday}]]*/ 'Día'
+							},
+							type : 'datetime',
+							dateTimeLabelFormats : {
+								day : '%d %m %Y',
+							}
+	                    },
+	                    tooltip : {
+	                    	shared: true
+						},
+	                    yAxis: {
+	                        title: {
+	                            text: null
+	                        }
+	                    },
+	                    series: [{
+	                        name: /*[[${alertreal}]]*/ 'Real',
+	                        data: averages.sort(function(a, b) {
+								return a[0] - b[0];
+							}),
+	                        zIndex: 1,
+	                        marker: {
+	                            fillColor: 'blue',
+	                            lineWidth: 2,
+	                        }
+	                    }, {
+	                        name: /*[[${alertminmax}]]*/ 'Min - Max',
+	                        data: ranges.sort(function(a, b) {
+								return a[0] - b[0];
+							}),
+	                        type: 'arearange',
+	                        lineWidth: 0,
+	                        linkedTo: ':previous',
+	                        color: Highcharts.getOptions().colors[0],
+	                        fillOpacity: 0.3,
+	                        zIndex: 0
+	                    },{
+	                    name: /*[[${alertexpected}]]*/ 'Expected',
+                        data: averages2.sort(function(a, b) {
+							return a[0] - b[0];
+						}),
+                        zIndex: 1,
+                        color: 'orange',
+                        marker: {
+                            fillColor: 'orange',
+                            lineWidth: 2,
+                        }
+	                    }
+	                    ]
+	                });
+		            
+		            $('<div class="chart">')
+	                .appendTo('#container')
+	                .highcharts({
+	                    chart: {
+	                        marginLeft: 40, // Keep all charts left aligned
+	                        spacingTop: 20,
+	                        spacingBottom: 20,
+	                        type: 'spline'
+	                    },
+	                    title: {
+	                        text: /*[[${alertstacompara}]]*/ 'Comparativa/años Real',
+	                        align: 'center',
+	                        margin: 0,
+	                        x: 30
+	                    },
+	                    credits: {
+	                        enabled: true
+	                    },
+	                    legend: {
+	                        enabled: true
+	                    },
+	                    xAxis: {
+	                        type : 'datetime',
+							dateTimeLabelFormats : {
+								day : '%d %m',
+								month : '%d/%m',
+								year : '%d %m',
+							},
+							title : {
+								text : /*[[${alertstamonth}]]*/ 'Meses'
+							}
+	                    },
+	                    yAxis: {
+	                        title: {
+	                            text: null
+	                        }
+	                    },
+	                    plotOptions: {
+	                        column: {
+	                            pointPadding: 0.2,
+	                            borderWidth: 0
+	                        }
+	                    },
+	                    tooltipe: {
+	                    	
+	                    },
+	                    series: seriesByYear
+	                });
+		            
+		            
+		            $.getJSON([[@{/{folder}/ajax/stats2/{id}(folder=${folder},id=${alert.id})}]], function (activity) {
+				        
+				    	var data1 = [];
+				    	var data2 = [];
+				    	var cat1 = [];
+				    	$.each(activity, function (i, alert) {
+				    		$.each(alert, function (data, values) {
+								data1.push(values[1]);
+								data2.push(values[2]);
+								cat1.push(values[0]);
+				    		});
+				        });
+				    	
+				            $('<div class="chart">')
+				                .appendTo('#container')
+				                .highcharts({
+				                    chart: {
+				                        marginLeft: 40, // Keep all charts left aligned
+				                        spacingTop: 20,
+				                        spacingBottom: 20,
+				                        type: 'column'
+				                    },
+				                    title: {
+				                        text: /*[[${dayalertnalerts}]]*/ 'Day Stats',
+				                        align: 'center',
+				                        margin: 0,
+				                        x: 30
+				                    },
+				                    credits: {
+				                        enabled: false
+				                    },
+				                    legend: {
+				                        enabled: false
+				                    },
+				                    xAxis: {
+				                        crosshair: true,
+				                        categories : cat1,
+										title : {
+											text : /*[[${dayoftheweek}]]*/ 'Día'
+										}
+				                    },
+				                    yAxis: {
+				                        title: {
+				                            text: null
+				                        }
+				                    },
+				                    plotOptions: {
+				                        column: {
+				                            pointPadding: 0.2,
+				                            borderWidth: 0
+				                        }
+				                    },
+				                    tooltipe: {
+				                    	
+				                    },
+				                    series: [{
+				                        data: data1,
+				                        name: /*[[${alertrealavg}]]*/ 'Real',
+				                    },{
+				                        data: data2,
+										type: 'spline',
+										 color: 'orange',
+				                        name: /*[[${alertexpectednextweek}]]*/ 'Expected',
+				                        marker: {
+				                            fillColor: 'orange',
+				                            lineWidth: 2,
+				                        }
+				                    }
+				                    ]
+				                });
+				            
+				            
+				    });
+		    });
+		
+		    
+		});
+		/* ]]> */
+		</script>
+	</div>
+</body>
+</html>
