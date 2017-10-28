@@ -1,11 +1,10 @@
 package com.ikip.newsdetect.main.service;
 
-import es.ucm.visavet.gbf.app.domain.Alert;
-import es.ucm.visavet.gbf.app.domain.Feed;
-import es.ucm.visavet.gbf.app.domain.NewsDetect;
-import es.ucm.visavet.gbf.app.repository.AlertRepository;
-import es.ucm.visavet.gbf.app.repository.LocationRepository;
-import es.ucm.visavet.gbf.app.service.NewsIndexService;
+import com.ikip.newsdetect.find.service.NewsIndexService;
+import com.ikip.newsdetect.main.repository.AlertRepository;
+import com.ikip.newsdetect.main.repository.LocationRepository;
+import com.ikip.newsdetect.model.Alert;
+import com.ikip.newsdetect.model.Feed;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -38,8 +37,7 @@ public class AlertServiceImpl {
 	
 	public Alert create(Alert word) throws IOException {
 		Alert alert = repository.save(word);
-		alert.setNewsDetect(new HashSet<NewsDetect>());
-		newsIndexService.resetAlert(alert);
+		//newsIndexService.resetAlert(alert);
 		return alert;
 	}
 	
@@ -55,7 +53,7 @@ public class AlertServiceImpl {
 	public SortedMap<Date,List<Alert>> getAllAlertsOrderByDate() {
 		SortedMap<Date,List<Alert>> alertasPorFecha = new TreeMap<Date, List<Alert>>(Collections.reverseOrder());
 		for (Alert alert : repository.findAll()) {
-			Date pubDate = alert.getCreateDate();
+			Date pubDate = new Date();//alert.getCreateDate();
 			Date day = new Date(pubDate.getYear(),pubDate.getMonth(),pubDate.getDate());
 			if (alertasPorFecha.containsKey(day)) {
 				alertasPorFecha.get(day).add(alert);
@@ -71,8 +69,9 @@ public class AlertServiceImpl {
 	@SuppressWarnings("deprecation")
 	public SortedMap<Date,List<Alert>> getAllAlertsByFeedOrderByDate(Feed feed) {
 		SortedMap<Date,List<Alert>> alertasPorFecha = new TreeMap<Date, List<Alert>>(Collections.reverseOrder());
-		for (Alert alert : repository.readAllDistinctByNewsDetectSite(feed)) {
-			Date pubDate = alert.getCreateDate();
+//		for (Alert alert : repository.readAllDistinctByNewsDetectSite(feed)) {
+		for (Alert alert : repository.findAll()) {
+			Date pubDate = new Date();//alert.getCreateDate();
 			Date day = new Date(pubDate.getYear(),pubDate.getMonth(),pubDate.getDate());
 			if (alertasPorFecha.containsKey(day)) {
 				alertasPorFecha.get(day).add(alert);
@@ -86,27 +85,32 @@ public class AlertServiceImpl {
 	}
 	
 	public Set<Alert> getAlertDetectActivatedAfter(Date date) {
-		return repository.readAllDistinctByNewsDetectHistoryFalseAndNewsDetectFalPositiveFalseAndNewsDetectDatePubGreaterThanEqualOrderByCreateDateDesc(date);
+//		return repository.readAllDistinctByNewsDetectHistoryFalseAndNewsDetectFalPositiveFalseAndNewsDetectDatePubGreaterThanEqualOrderByCreateDateDesc(date);
+		return repository.findAllByOrderByTitleAsc();
 	}
 	
 	public Set<Alert> getAlertDetectSite(Feed feed) {
-		return repository.readAllDistinctByNewsDetectSite(feed);
+//		return repository.readAllDistinctByNewsDetectSite(feed);
+		return repository.findAllByOrderByTitleAsc();
 	}
 	
 	public Set<Alert> getAllAlertActive() {
-		return repository.readAllDistinctByNewsDetectHistoryFalseAndNewsDetectFalPositiveFalse();
+//		return repository.readAllDistinctByNewsDetectHistoryFalseAndNewsDetectFalPositiveFalse();
+		return repository.findAllByOrderByTitleAsc();
 	}
 	
 	public Set<Alert> getAllAlertWithHistory() {
-		return repository.readAllDistinctByNewsDetectHistoryTrue();
+//		return repository.readAllDistinctByNewsDetectHistoryTrue();
+		return repository.findAllByOrderByTitleAsc();
 	}
 	
 	public Set<Alert> getAllAlertWithFalsePositive() {
-		return repository.readAllDistinctByNewsDetectFalPositiveTrue();
+//		return repository.readAllDistinctByNewsDetectFalPositiveTrue();
+		return repository.findAllByOrderByTitleAsc();
 	}
 	
 //	public Alert setNewsLocation(Alert alert,List<Location> location) {
-//		for (NewsDetect news : alert.getNewsDetect()) {
+//		for (DetectedNews news : alert.getNewsDetect()) {
 //			news.setLocation(location);
 //		}
 //		return alert;

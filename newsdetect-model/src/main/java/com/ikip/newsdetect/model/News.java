@@ -3,16 +3,15 @@ package com.ikip.newsdetect.model;
 import lombok.*;
 
 import javax.persistence.*;
+import javax.validation.constraints.NotNull;
 import java.time.LocalDateTime;
-import java.util.Comparator;
-import java.util.Date;
 
 @Entity
 @Data
-@ToString
-@EqualsAndHashCode
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
+@Table(name = "news")
 public class News {
 	
 	public static String fieldTitle = "title";
@@ -27,15 +26,18 @@ public class News {
 	public static String fieldSiteType = "siteType";
 	
 	@Id
-	@GeneratedValue(strategy=GenerationType.TABLE)
+	@GeneratedValue
 	private Long id;
 	@Lob
 	private String title;
 	@Lob
 	private String content;
-	private Long site;
+	@NotNull
+	private Long feedId;
 	@Lob
+	@NotNull
 	private String url;
+	@NotNull
 	private LocalDateTime pubDate = LocalDateTime.now();
 
 }

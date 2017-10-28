@@ -6,7 +6,7 @@ public enum CharsetEnum {
 	
 	private String value;
 
-    private CharsetEnum(String value) {
+    CharsetEnum(String value) {
             this.value = value;
     }
 

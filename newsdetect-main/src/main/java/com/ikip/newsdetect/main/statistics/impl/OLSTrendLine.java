@@ -1,7 +1,6 @@
 package com.ikip.newsdetect.main.statistics.impl;
 
-import es.ucm.visavet.gbf.app.LanguageLoad;
-import es.ucm.visavet.gbf.app.statistics.TrendLine;
+import com.ikip.newsdetect.main.statistics.TrendLine;
 import org.apache.commons.math3.linear.MatrixUtils;
 import org.apache.commons.math3.linear.RealMatrix;
 import org.apache.commons.math3.stat.regression.OLSMultipleLinearRegression;
@@ -18,7 +17,7 @@ public abstract class OLSTrendLine implements TrendLine {
     @Override
     public void setValues(double[] y, double[] x) {
         if (x.length != y.length) {
-            throw new IllegalArgumentException(LanguageLoad.getinstance().find("internal/trend/error/equeal")+String.format("(%d != %d)",y.length,x.length));
+//            throw new IllegalArgumentException(LanguageLoad.getinstance().find("internal/trend/error/equeal")+String.format("(%d != %d)",y.length,x.length));
         }
         double[][] xData = new double[x.length][]; 
         for (int i = 0; i < x.length; i++) {

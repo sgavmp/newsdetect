@@ -1,12 +1,12 @@
 package com.ikip.newsdetect.main.repository;
 
-import es.ucm.visavet.gbf.app.domain.Usuario;
-import org.springframework.data.repository.CrudRepository;
+import com.ikip.newsdetect.model.User;
+import org.springframework.data.repository.PagingAndSortingRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface UsuarioRepository extends CrudRepository<Usuario, String> {
+public interface UsuarioRepository extends PagingAndSortingRepository<User, String> {
 
-	public Usuario findByUserName(String userName);
+	User findByUserName(String userName);
 	
 }

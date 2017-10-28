@@ -1,15 +1,15 @@
 package com.ikip.newsdetect.main.repository;
 
-import es.ucm.visavet.gbf.app.domain.AlertAbstract;
-import es.ucm.visavet.gbf.app.domain.Feed;
-import es.ucm.visavet.gbf.app.domain.NewsDetect;
+import com.ikip.newsdetect.model.DetectedNews;
 import org.springframework.data.repository.CrudRepository;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 
-public interface NewsDetectRepository extends CrudRepository<NewsDetect, Long> {
+@Repository
+public interface NewsDetectRepository extends CrudRepository<DetectedNews, Long> {
 	
-	public NewsDetect findFirstByAlertDetectAndLink(AlertAbstract alertDetect, String link);
-	public List<NewsDetect> findAllDistinctBySiteOrderByDatePubDesc(Feed site);
+	DetectedNews findFirstByAlertIdAndLink(Long alertId, String link);
+	List<DetectedNews> findAllDistinctByFeedIdOrderByDatePubDesc(Long feedId);
 
 }

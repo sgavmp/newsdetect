@@ -1,8 +1,8 @@
 package com.ikip.newsdetect.main.service;
 
-import es.ucm.visavet.gbf.app.domain.Location;
-import es.ucm.visavet.gbf.app.repository.LocationRepository;
-import es.ucm.visavet.gbf.app.service.NewsIndexService;
+import com.ikip.newsdetect.find.service.NewsIndexService;
+import com.ikip.newsdetect.main.repository.LocationRepository;
+import com.ikip.newsdetect.model.Location;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

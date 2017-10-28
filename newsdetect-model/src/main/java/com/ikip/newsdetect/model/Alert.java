@@ -1,34 +1,27 @@
 package com.ikip.newsdetect.model;
 
-import com.sun.istack.internal.NotNull;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
+import javax.validation.constraints.NotNull;
 
 @Entity
-@Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 @Data
-@ToString
-@EqualsAndHashCode
 @AllArgsConstructor
 @NoArgsConstructor
+@Table(name = "alerts")
 public class Alert {
 
 	@Id
-	@GeneratedValue(strategy=GenerationType.TABLE)
+	@GeneratedValue
 	private Long id;
 	protected String title;
-	protected String titleEn;
 	@NotNull
 	@Lob
-	private String words;
-	@Lob
-	private String wordsNegative;
+	private String query;
 	@Enumerated(EnumType.STRING)
 	private AlertLevelEnum type;
-	private LocalDateTime ultimaRecuperacion;
-	public float Score;
 
 }

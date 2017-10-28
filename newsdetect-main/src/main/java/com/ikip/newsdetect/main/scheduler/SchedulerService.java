@@ -1,10 +1,9 @@
 package com.ikip.newsdetect.main.scheduler;
 
 import com.google.common.collect.Maps;
-import es.ucm.visavet.gbf.app.LanguageLoad;
-import es.ucm.visavet.gbf.app.domain.Feed;
-import es.ucm.visavet.gbf.app.service.ConfiguracionService;
-import es.ucm.visavet.gbf.app.service.FeedService;
+import com.ikip.newsdetect.main.service.FeedService;
+import com.ikip.newsdetect.model.Feed;
+import com.ikip.newsdetect.model.UpdateStateEnum;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
@@ -25,8 +24,6 @@ public class SchedulerService {
 	private final static Logger LOGGER = Logger.getLogger(SchedulerService.class);
 
 	@Autowired
-	private ConfiguracionService configuracion;
-	@Autowired
 	private TaskScheduler scheduler;
 	@Autowired
 	private AutowireCapableBeanFactory beanFactory;
@@ -38,7 +35,7 @@ public class SchedulerService {
 
 	@PostConstruct
 	public void init() {
-		if (configuracion.getConfiguracion().isRunService()) {
+//		if (configuracion.getConfiguracion().isRunService()) {
 			List<Feed> listFeeds = serviceFeed.getAllFeedLastUp();
 			Date startTime = new Date();
 			startTime.setTime(startTime.getTime() + 1000 * 10);// Las tareas se
@@ -50,7 +47,7 @@ public class SchedulerService {
 																// tras
 																// planificar
 			for (Feed feed : listFeeds) {
-				if (feed.isActived()) {
+				if (!feed.getState().equals(UpdateStateEnum.DEACTIVATED)) {
 					AlertTaskContainer task = new AlertTaskContainer(feed);
 					beanFactory.autowireBean(task);
 					ScheduledFuture<?> futureTask = scheduler
@@ -64,10 +61,10 @@ public class SchedulerService {
 					tasks.put(feed.getId(), futureTask);
 				}
 			}
-			LOGGER.info(LanguageLoad.getinstance().find("internal/scheduler/info/scheduler1") + listFeeds.size() + LanguageLoad.getinstance().find("internal/scheduler/info/scheduler2"));
-		} else {
-			LOGGER.info(LanguageLoad.getinstance().find("internal/scheduler/info/schedulerdesactivado") );
-		}
+//			LOGGER.info(LanguageLoad.getinstance().find("internal/scheduler/info/scheduler1") + listFeeds.size() + LanguageLoad.getinstance().find("internal/scheduler/info/scheduler2"));
+//		} else {
+////			LOGGER.info(LanguageLoad.getinstance().find("internal/scheduler/info/schedulerdesactivado") );
+//		}
 	}
 
 	public void removeFeedTask(Feed feed) {
@@ -85,31 +82,31 @@ public class SchedulerService {
 			ScheduledFuture<?> futureTask = tasks.remove(feed.getId());
 			futureTask.cancel(true);
 		}
-		if (feed.isActived() && configuracion.getConfiguracion().isRunService()) {
+//		if (feed.isActived() && configuracion.getConfiguracion().isRunService()) {
 			ScheduledFuture<?> futureTask = null;
 			AlertTaskContainer task = new AlertTaskContainer((Feed) feed);
 			beanFactory.autowireBean(task);
 			futureTask = scheduler.scheduleWithFixedDelay(task, startTime,
 					MIN_MILIS * feed.getMinRefresh());
 			tasks.put(feed.getId(), futureTask);
-		}
+//		}
 	}
 
 	public void addFeedTask(Feed feed) {
 		Date startTime = new Date();
 		startTime.setTime(startTime.getTime() + 1000 * 120);
-		if (feed.isActived() && configuracion.getConfiguracion().isRunService()) {
+//		if (feed.isActived() && configuracion.getConfiguracion().isRunService()) {
 			ScheduledFuture<?> futureTask = null;
 			AlertTaskContainer task = new AlertTaskContainer((Feed) feed);
 			beanFactory.autowireBean(task);
 			futureTask = scheduler.scheduleWithFixedDelay(task, startTime,
 					MIN_MILIS * feed.getMinRefresh());
 			tasks.put(feed.getId(), futureTask);
-		}
+//		}
 	}
 
 	public void startTask(Feed feed) {
-		if (feed.isActived()) {
+		if (!feed.getState().equals(UpdateStateEnum.DEACTIVATED)) {
 			Date startTime = new Date();
 			startTime.setTime(startTime.getTime() + 1000 * 5); // Iniciar en 5
 			AlertTaskContainer task = new AlertTaskContainer((Feed) feed);
@@ -130,7 +127,7 @@ public class SchedulerService {
 		for (Feed feed : serviceFeed.getAllFeedLastUp()) {
 			removeFeedTask(feed);
 		}
-		LOGGER.info(LanguageLoad.getinstance().find("internal/scheduler/info/schedulerdestop"));
+//		LOGGER.info(LanguageLoad.getinstance().find("internal/scheduler/info/schedulerdestop"));
 	}
 	
 	public String getNextExecution(Feed feed) {

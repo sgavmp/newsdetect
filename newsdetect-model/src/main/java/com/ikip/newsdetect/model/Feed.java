@@ -3,58 +3,43 @@ package com.ikip.newsdetect.model;
 import lombok.*;
 
 import javax.persistence.*;
-import java.sql.Timestamp;
-import java.time.LocalDateTime;
-import java.util.Date;
+import javax.validation.constraints.NotNull;
 
 @Entity
 @Data
-@ToString
-@EqualsAndHashCode
 @AllArgsConstructor
 @NoArgsConstructor
+@Table(name = "feeds")
 public class Feed {
 
-	@Id @GeneratedValue(strategy=GenerationType.TABLE)
+	@Id @GeneratedValue
 	private Long id;
+	@NotNull
 	private String name;
 	private String dateFormat;
-	@Enumerated(EnumType.STRING)
-	private LanguageEnum languaje = LanguageEnum.SPANISH;
 	@Lob
-	private String lastNewsLink = "";
-	@Lob
-	private String urlNews;
-	private boolean isRSS = false;
-	private boolean isAuto = false;
+	@NotNull
+	private String urlScrap;
+	private String urlFeed;
 	@Enumerated(EnumType.STRING)
-	private WebLevelEnum type = WebLevelEnum.red;
-	@Enumerated(EnumType.STRING)
-	private FeedTypeEnum feedType = FeedTypeEnum.massmedia;
-	private Integer numNewNews;
-	private LocalDateTime dateFirstNews;
-	private LocalDateTime ultimaRecuperacion;
-	private boolean actived = true;
-	private String comment;
-	private Integer minRefresh = 120;
+	@NotNull
+	private ScrapTypeEnum scrapType;
+	@NotNull
+	private String feedType;
+	private String description;
+	@NotNull
+	private Integer minRefresh;
 	private String selectorTitle;
 	private String selectorContent;
 	private String selectorPubDate;
-	private boolean selectorTitleMeta;
-	private boolean selectorContentMeta;
-	private boolean selectorPubDateMeta;
+	private Boolean selectorTitleMeta;
+	private Boolean selectorContentMeta;
+	private Boolean selectorPubDateMeta;
 	@Enumerated(EnumType.STRING)
-	private CharsetEnum charSet = CharsetEnum.UTF8;
+	private CharsetEnum charSet;
 	@Enumerated(EnumType.STRING)
-	private UpdateStateEnum state = UpdateStateEnum.WAIT;
-	private String newsLink;
+	private UpdateStateEnum state;
 	@Enumerated(EnumType.STRING)
-	private ExtractionTypeEnum extractionType = ExtractionTypeEnum.ARTICLE_EXTRACTOR;
-	private boolean NoEstandar=false;
-	private String pluginPath="";
-	@Transient
-	private boolean updateIndex=false;
-	@Transient
-	private String nextExecution="";
+	private ExtractionTypeEnum extractionType;
 	
 }

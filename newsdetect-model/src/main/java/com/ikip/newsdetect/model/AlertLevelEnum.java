@@ -6,7 +6,7 @@ public enum AlertLevelEnum {
 	
 	private int value;
 
-    private AlertLevelEnum(int value) {
+    AlertLevelEnum(int value) {
             this.value = value;
     }
 

@@ -1,6 +1,6 @@
 package com.ikip.newsdetect.main.repository;
 
-import es.ucm.visavet.gbf.app.domain.Location;
+import com.ikip.newsdetect.model.Location;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
 

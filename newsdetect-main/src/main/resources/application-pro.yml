@@ -1,0 +1,21 @@
+logging:
+  config: classpath:logback-production.xml
+  pattern:
+    level: WARN
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg %n'
+    
+gbfood:
+  resources: 
+    crawler: /tomcatfolder/app/gbfood/crawler/
+    general: /tomcatfolder/app/
+    simy: simy.xml
+logging:
+  config: classpath:logback-production.xml
+  pattern:
+    level: DEBUG
+    console: '%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg %n'
+spring:
+  profiles: production
+  datasource:
+    url: jdbc:mysql://localhost:3306/vetetest?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true
+    driverClassName: com.mysql.jdbc.Driver

@@ -1,14 +1,15 @@
 package com.ikip.newsdetect.main.service;
 
 import com.google.common.collect.Lists;
-import es.ucm.visavet.gbf.app.domain.*;
-import es.ucm.visavet.gbf.app.repository.FeedRepository;
-import es.ucm.visavet.gbf.app.repository.NewsDetectRepository;
-import es.ucm.visavet.gbf.app.scheduler.SchedulerService;
-import es.ucm.visavet.gbf.app.service.FeedScraping;
-import es.ucm.visavet.gbf.app.service.FeedService;
-import es.ucm.visavet.gbf.app.service.NewsIndexService;
+import com.ikip.newsdetect.extractor.service.FeedScraping;
+import com.ikip.newsdetect.find.service.NewsIndexService;
+import com.ikip.newsdetect.main.dto.FeedForm;
+import com.ikip.newsdetect.main.repository.FeedRepository;
+import com.ikip.newsdetect.main.repository.NewsDetectRepository;
+import com.ikip.newsdetect.main.scheduler.SchedulerService;
+import com.ikip.newsdetect.model.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.net.MalformedURLException;
@@ -34,12 +35,13 @@ public class FeedServiceImpl implements FeedService {
 
 	@Override
 	public List<News> scrapFeed(Feed feed, Date after, boolean withOutLimit) {
-		return scrapingFeed.scrapNews(feed, after, withOutLimit);
+//		return scrapingFeed.scrapNews(feed, after, withOutLimit);
+		return null;
 	}
 	
 	public News testFeed(FeedForm feed) {
-		News news = scrapingFeed.scrapOneNews(feed);
-		return news;
+//		News news = scrapingFeed.scrapOneNews(feed);
+		return null;
 	}
 
 	@Override
@@ -50,8 +52,7 @@ public class FeedServiceImpl implements FeedService {
 
 	@Override
 	public List<Feed> getAllFeedLastUp() {
-	//	return repositoryFeed.findAllByOrderByNameAsc();
-		return repositoryFeed.findAllByOrderByUltimaRecuperacionAsc();
+		return repositoryFeed.findAll();
 	}
 	
 	
@@ -76,8 +77,8 @@ public class FeedServiceImpl implements FeedService {
 			e.printStackTrace();
 			return false;
 		}
-		List<NewsDetect> lista = newsDetectRepository.findAllDistinctBySiteOrderByDatePubDesc(feed);
-		for (NewsDetect news : lista)
+		List<DetectedNews> lista = newsDetectRepository.findAllDistinctByFeedIdOrderByDatePubDesc(feed.getId());
+		for (DetectedNews news : lista)
 			newsDetectRepository.delete(news.getId());
 		this.repositoryFeed.delete(feed);
 		return !this.repositoryFeed.exists(feed.getId());
@@ -87,7 +88,6 @@ public class FeedServiceImpl implements FeedService {
 	public Feed updateFeed(Feed feed) {
 		Feed feedU = repositoryFeed.save(feed);
 		schedulerService.updateFeedTask(feed);
-		if (feed.isUpdateIndex())
 			try {
 				newsIndexService.updateIndex(feed);
 			} catch (Exception e) {
@@ -105,8 +105,8 @@ public class FeedServiceImpl implements FeedService {
 		this.schedulerService = schedulerService;
 	}
 	
-	public List<NewsDetect> findAllDistinctNewsDetectByFeedOrderByDatePub(Feed feed) {
-		return newsDetectRepository.findAllDistinctBySiteOrderByDatePubDesc(feed);
+	public List<DetectedNews> findAllDistinctNewsDetectByFeedOrderByDatePub(Feed feed) {
+		return newsDetectRepository.findAllDistinctByFeedIdOrderByDatePubDesc(feed.getId());
 	}
 	
 	public Feed setSateOfFeed(Feed feed, UpdateStateEnum state) {
@@ -129,12 +129,12 @@ public class FeedServiceImpl implements FeedService {
 			String url = matcher.group("url");
 			String tipo = matcher.group("tipo");
 			String lugares = matcher.group("lugar");
-			FeedTypeEnum typeE = FeedTypeEnum.valueOf(tipo.substring(2));
-			List<FeedPlaceEnum> lugaresE = Lists.newArrayList();
-			for (String lugaStep : lugares.split("\t")) {
-				if (!lugaStep.trim().isEmpty())
-					lugaresE.add(FeedPlaceEnum.valueOf(lugaStep.trim().substring(2)));
-			}
+//			FeedTypeEnum typeE = FeedTypeEnum.valueOf(tipo.substring(2));
+//			List<FeedPlaceEnum> lugaresE = Lists.newArrayList();
+//			for (String lugaStep : lugares.split("\t")) {
+//				if (!lugaStep.trim().isEmpty())
+//					lugaresE.add(FeedPlaceEnum.valueOf(lugaStep.trim().substring(2)));
+//			}
 			URL link = null;
 			try {
 				link = new URL(url);
@@ -143,11 +143,11 @@ public class FeedServiceImpl implements FeedService {
 				continue;
 			}
 			Feed feed = new Feed();
-			feed.setUrlNews(url);
+			feed.setUrlScrap(url);
 			feed.setName(name);
-			feed.setAuto(true);
-			feed.setFeedType(typeE);
-			feed.setFeedPlace(lugaresE);
+			feed.setScrapType(ScrapTypeEnum.AUTO);
+			feed.setFeedType(tipo);
+//			feed.setFeedPlace(lugaresE);
 			this.createFeed(feed);
 		}
 		return fail;

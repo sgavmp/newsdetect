@@ -1,6 +1,6 @@
 package com.ikip.newsdetect.main.config;
 
-import es.ucm.visavet.gbf.app.service.impl.UserDetailServiceImpl;
+import com.ikip.newsdetect.main.service.UserDetailServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

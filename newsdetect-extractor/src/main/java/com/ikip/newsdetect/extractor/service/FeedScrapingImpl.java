@@ -1,7 +1,12 @@
 package com.ikip.newsdetect.extractor.service;
 
-import com.ikip.newsdetect.model.Feed;
-import com.ikip.newsdetect.model.News;
+import com.ikip.newsdetect.extractor.exception.FeedAutoScrapException;
+import com.ikip.newsdetect.extractor.exception.FeedManualScrapException;
+import com.ikip.newsdetect.extractor.exception.FeedRssScrapException;
+import com.ikip.newsdetect.extractor.repository.EventRepository;
+import com.ikip.newsdetect.extractor.repository.FeedCrawlerUrlRepository;
+import com.ikip.newsdetect.extractor.util.GBFoodCrawler;
+import com.ikip.newsdetect.model.*;
 import com.kohlschutter.boilerpipe.BoilerpipeExtractor;
 import com.kohlschutter.boilerpipe.BoilerpipeProcessingException;
 import com.kohlschutter.boilerpipe.extractors.CommonExtractors;
@@ -16,101 +21,59 @@ import edu.uci.ics.crawler4j.crawler.CrawlController;
 import edu.uci.ics.crawler4j.fetcher.PageFetcher;
 import edu.uci.ics.crawler4j.robotstxt.RobotstxtConfig;
 import edu.uci.ics.crawler4j.robotstxt.RobotstxtServer;
-import org.apache.log4j.Logger;
+import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Repository;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.net.URLClassLoader;
 import java.net.URLConnection;
-import java.sql.Date;
-import java.sql.Timestamp;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.HashMap;
 import java.util.List;
 
 @Repository
+@Slf4j
 public class FeedScrapingImpl implements FeedScraping {
 
-	private final static Logger LOGGER = Logger
-			.getLogger(FeedScrapingImpl.class);
-
-	private FeedRepository repositoryFeed;
-
-	private ScrapStatisticsRepository statisticsRepository;
-	
-	private NewsRepository newsRepository;
-	
-	private NewsIndexService newsIndexService;
+	private final FeedCrawlerUrlRepository feedCrawlerUrlRepository;
+	private final EventRepository eventRepository;
 
 	@Value("${gbfood.resources.crawler}")
 	private String pathCrawler = "/tomcatfolder/app/gbfood/crawler/";
-	
-	public static final String ROOT = "folderuploadjar/";
 
-	@Autowired
-	public FeedScrapingImpl(FeedRepository repositoryFeed,
-                            ScrapStatisticsRepository statisticsRepository,
-                            NewsRepository newsRepository,
-                            NewsIndexService newsIndexServic,
-                            ConfigurationServiceIO IOFolder) {
-		this.repositoryFeed = repositoryFeed;
-		this.statisticsRepository = statisticsRepository;
-		this.newsRepository = newsRepository;
-		this.newsIndexService = newsIndexServic;
-		this.IOFolder=IOFolder;
+	public FeedScrapingImpl(FeedCrawlerUrlRepository feedCrawlerUrlRepository, EventRepository eventRepository) {
+		this.feedCrawlerUrlRepository = feedCrawlerUrlRepository;
+		this.eventRepository = eventRepository;
 	}
 
 	@Override
-	public List<News> scrapNews(Feed feed, Date after, boolean withOutLimit) {
-		List<News> newsList = new ArrayList<>();
+	public List<News> scrapNews(Feed feed, LocalDateTime after, boolean withOutLimit) throws FeedAutoScrapException, FeedRssScrapException, FeedManualScrapException {
+		List<News> newsList;
 		
-		if (feed.isNoEstandar())
-		{
-			newsList = scrapingWithNEstandar(feed, after, withOutLimit);
-		}
-		else if (feed.isAuto()) {
-			newsList = scrapingAuto(feed, after, withOutLimit);
+		if (feed.getScrapType().equals(ScrapTypeEnum.AUTO)) {
+			newsList = scrapingAuto(feed);
 		} else {
-			if (feed.isRSS()) {
+			if (feed.getScrapType().equals(ScrapTypeEnum.RSS)) {
 				newsList = scrapingWhitRSS(feed, after, withOutLimit);
 			} else {
 				newsList = scrapingWithOutRSS(feed, after, withOutLimit);
 			}
 		}
-		feed = repositoryFeed.findOne(feed.getId());
-		feed.setUltimaRecuperacion(new Timestamp(System.currentTimeMillis()));
-		feed.setNumNewNews(newsList != null ? newsList.size() : 0);
-		repositoryFeed.save((Feed) feed);
-		if (newsList != null) {
-			Date today = new Date(System.currentTimeMillis());
-			ScrapStatistics statistics = statisticsRepository.findOne(today);
-			if (statistics != null) {
-				statistics.setTotal(statistics.getTotal() + newsList.size());
-			} else {
-				statistics = new ScrapStatistics(today, newsList.size());
-			}
-			statisticsRepository.save(statistics);
-		}
-		LOGGER.info(LanguageLoad.getinstance().find("internal/feed/info/newsrecover") + feed.getName());
+		log.debug("");//TODO
 		return newsList;
 	}
 
-	@SuppressWarnings("unchecked")
-	private List<News> scrapingAuto(Feed feed, Date after, boolean withOutLimit) {
+	private List<News> scrapingAuto(Feed feed) throws FeedAutoScrapException {
 		try {
 			List<News> listNews = new ArrayList<News>();
-			if (feed.getUrlNews() != null) {
+			if (feed.getUrlScrap() != null) {
 				String crawlStorageFolder = pathCrawler;
 				int numberOfCrawlers = 1;
 
@@ -136,7 +99,7 @@ public class FeedScrapingImpl implements FeedScraping {
 				 * first URLs that are fetched and then the crawler starts
 				 * following links which are found in these pages
 				 */
-				controller.addSeed(feed.getUrlNews());
+				controller.addSeed(feed.getUrlScrap());
 
 				/*
 				 * Start the crawl. This is a blocking operation, meaning that
@@ -146,208 +109,47 @@ public class FeedScrapingImpl implements FeedScraping {
 				controller.start(GBFoodCrawler.class, numberOfCrawlers);
 				List<String> newsLinks = (List<String>) controller
 						.getCrawlersLocalData().get(0);
+				List<String> feedCrawlerUrlsPast = feedCrawlerUrlRepository.findAllCrawlerUrlByFeedId(feed.getId());
+				List<String> feedCrawlerUrlNew = new ArrayList<>();
 				News news = null;
 				for (String linkNews : newsLinks) {
-					if (feed.getCrawlerNews().contains(linkNews))
+					if (feedCrawlerUrlsPast.contains(linkNews))
 						continue;
 					news = getNewsWithOutRSS(feed, linkNews, null);
 					listNews.add(news);
-					feed.getCrawlerNews().add(linkNews);
+					feedCrawlerUrlNew.add(linkNews);
 				}
-				repositoryFeed.save(feed);
 			}
 			return listNews;
 		} catch (IOException e) {
-			LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserroracces") 
-					+ e.getMessage() + " -> " + feed.getNewsLink());
-			return null;
+			log.error("");//TODO
+			throw new FeedAutoScrapException("",e);//TODO
 		} catch (Exception e) {
-			LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserroraccesg") 
-					+ e.getMessage() + " -> " + feed.getNewsLink());
-			return null;
+			log.error("");//TODO
+			throw new FeedAutoScrapException("",e);//TODO
 		}
-	}
-	
-	
-	private News NewI2New(app.model.NewsInterchange oneNews, Feed feed) {
-		News NN=new News();
-		NN.setContent(oneNews.getContent());
-		NN.setPubDate(oneNews.getPubDate());
-		NN.setTitle(oneNews.getTitle());
-		NN.setUrl(oneNews.getUrl());
-		if (feed!=null)
-			{
-			if (feed.getId()==null)
-				feed.setId(-1l);
-			
-			NN.setSite(feed.getId());
-			}
-		return NN;
-	}
-	
-	private HashMap<String, String> set_params(Feed feed) {
-		HashMap<String, String> Salida=new HashMap<String, String>();
-		for (PairAtributte pairAtt : feed.getPairAttributes()) {
-			if (!pairAtt.getType().isEmpty()&&!pairAtt.getValue().isEmpty()&&pairAtt.getType()!=null&&pairAtt.getValue()!=null)
-			Salida.put(pairAtt.getType(), pairAtt.getValue());
-		}
-		return Salida;
-	}
-	
-	private List<News> scrapingWithNEstandar(Feed feed, Date after, boolean withOutLimit) {
-		String ShowName = "Error";
-		List<News> listNews = new ArrayList<News>();
-		try {
-			File fileI = new File(IOFolder.getPathgen()+ROOT+feed.getPluginPath());
-			fileI.mkdirs();
-			URLClassLoader loader = URLClassLoader.newInstance(
-				    new URL[] { fileI.toURI().toURL() },
-				    getClass().getClassLoader()
-				);
-				Class<?> clazz = Class.forName("ExternalCollectionImp", true, loader);
-				app.model.ExternalCollection instance=(app.model.ExternalCollection) clazz.newInstance ();
-				
-				
-				HashMap<String,String> startparams=set_params(feed);
-				instance.iniciatevars(startparams);
-				
-				
-				try {
-					
-					if (feed.getUltimaRecuperacion()!=null)
-						{
-						after=new Date(feed.getUltimaRecuperacion().getTime());
-						Calendar c = Calendar.getInstance();
-						c.setTime(after);
-						c.add(Calendar.DATE, -1);
-						after=new Date(c.getTime().getTime());
-						}
-					
-					List<News> listNewsT = new ArrayList<News>();
-					
-					List<app.model.NewsInterchange> listaN = instance.getAllNews(after);
-					
-					for (app.model.NewsInterchange newsInterchange : listaN) 
-						listNewsT.add(NewI2New(newsInterchange,feed));
-					
-					loader.close();
-					
-					
-					News news = null;
-					for (News linkNews2 : listNewsT) {
-						if (feed.getCrawlerNews().contains(linkNews2.getUrl()))
-							continue;
-						news = linkNews2;
-						listNews.add(news);
-						feed.getCrawlerNews().add(linkNews2.getUrl());
-					}
-					
-					feed.setUltimaRecuperacion(new Timestamp(System.currentTimeMillis()));
-					feed.setNumNewNews(listNews != null ? listNews.size() : 0);
-					repositoryFeed.save(feed);
-					
-					return listNews;
-					
-				} catch (Exception e) {
-					loader.close();
-					e.printStackTrace();
-					LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserroraccesg") 
-							+ e.getMessage() + " -> " + feed.getNewsLink());
-					return null;
-				}
-				
-				
-				
-				
-				
-				
-				
-		} catch (Exception e) {
-			
-			System.out.println(LanguageLoad.getinstance().find("internal/feed/error/newserrorjar") + ShowName + LanguageLoad.getinstance().find("internal/feed/error/newserrorjar2") +feed.getPluginPath() );
-			ShowName=ShowName+"Error";
-			e.printStackTrace();
-			
-			LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserroraccesg") 
-					+ e.getMessage() + " -> " + feed.getNewsLink());
-			
-			return null;
-		}
-		
-		
-		
-		
 	}
 
+
 	@Override
-	public News scrapOneNews(FeedForm feed) {
+	public News scrapOneNews(Feed feed) throws FeedAutoScrapException, FeedRssScrapException, FeedManualScrapException {
 		
-		if (feed.isNoEstandar()) {
-			return scrapingOneWithNEstandar(feed);
-		} 
-		if (feed.getIsAuto()) {
+
+		if (feed.getScrapType().equals(ScrapTypeEnum.AUTO)) {
 			return scrapingOneWithAuto(feed);
 		} else {
-			if (feed.getIsRSS()) {
+			if (feed.getScrapType().equals(ScrapTypeEnum.RSS)) {
 				return scrapingOneWhitRSS(feed);
 			} else {
 				return scrapingOneWithOutRSS(feed);
 			}
 		}
 	}
-	
-	
-private News scrapingOneWithNEstandar(FeedForm feed) {
-		
-		
-		String ShowName = "Error";
-		try {
-			File fileI = new File(IOFolder.getPathgen()+ROOT+feed.getPluginPath());
-			fileI.mkdirs();
-			URLClassLoader loader = URLClassLoader.newInstance(
-				    new URL[] { fileI.toURI().toURL() },
-				    getClass().getClassLoader()
-				);
-				Class<?> clazz = Class.forName("ExternalCollectionImp", true, loader);
-				app.model.ExternalCollection instance=(app.model.ExternalCollection) clazz.newInstance ();
-				
-				instance.iniciatevars(new HashMap<String,String>());
 
-				
-				try {
-					
-					loader.close();
-					return NewI2New(instance.getOneNews(),null);
-					
-				} catch (Exception e) {
-					e.printStackTrace();
-					LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserroraccesg") 
-							+ e.getMessage() + " -> " + feed.getNewsLink());
-					loader.close();
-					return null;
-				}
-	
-		} catch (Exception e) {
-			
-			System.out.println(LanguageLoad.getinstance().find("internal/feed/error/newserrorjar") + ShowName + LanguageLoad.getinstance().find("internal/feed/error/newserrorjar2") +feed.getPluginPath() );
-			ShowName=ShowName+"Error";
-			e.printStackTrace();
-			
-			LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserroraccesg") 
-					+ e.getMessage() + " -> " + feed.getNewsLink());
-			
-			return null;
-		}
-		
-
-		
-	}
-
-	@SuppressWarnings("unchecked")
-	private News scrapingOneWithAuto(FeedForm feed) {
+	private News scrapingOneWithAuto(Feed feed) throws FeedAutoScrapException {
 		try {
 			List<News> listNews = new ArrayList<News>();
-			if (feed.getUrlNews() != null) {
+			if (feed.getUrlScrap() != null) {
 				String crawlStorageFolder = pathCrawler;
 				int numberOfCrawlers = 1;
 
@@ -374,7 +176,7 @@ private News scrapingOneWithNEstandar(FeedForm feed) {
 				 * first URLs that are fetched and then the crawler starts
 				 * following links which are found in these pages
 				 */
-				controller.addSeed(feed.getUrlNews());
+				controller.addSeed(feed.getUrlScrap());
 
 				/*
 				 * Start the crawl. This is a blocking operation, meaning that
@@ -386,47 +188,45 @@ private News scrapingOneWithNEstandar(FeedForm feed) {
 						.getCrawlersLocalData().get(0);
 				News news = null;
 				for (String linkNews : newsLinks) {
-					news = getNewsWithOutRSS(new Feed(feed), linkNews, "");
+					news = getNewsWithOutRSS(feed, linkNews, "");
 					listNews.add(news);
 					break;
 				}
 			}
 			return listNews.get(0);
 		} catch (IOException e) {
-			LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserroracces") 
-					+ e.getMessage() + " -> " + feed.getNewsLink());
-			return null;
+			log.error("");//TODO
+			throw new FeedAutoScrapException("",e);//TODO
 		} catch (Exception e) {
-			LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserroraccesg") 
-					+ e.getMessage() + " -> " + feed.getNewsLink());
-			return null;
+			log.error("");//TODO
+			throw new FeedAutoScrapException("",e);//TODO
 		}
 	}
 
-	private List<News> scrapingWhitRSS(Feed feed, Date after,
-			boolean withOutLimit) {
+	private List<News> scrapingWhitRSS(Feed feed, LocalDateTime after,
+			boolean withOutLimit) throws FeedRssScrapException {
 		try {
 			List<News> listNews = new ArrayList<News>();
 			// open a connection to the rss feed
-			if (feed.getUrlNews() != null) {
-				URL url = new URL(feed.getUrlNews());
+			if (feed.getUrlScrap() != null) {
+				URL url = new URL(feed.getUrlScrap());
 				URLConnection conn = url.openConnection();
 				SyndFeedInput input = new SyndFeedInput();
 				SyndFeed newsList = input.build(new XmlReader(conn
 						.getInputStream()));
 				boolean isFirst = true;
 				String lastNews = null;
+				Event lastSearch = eventRepository.findOneByOriginIdAndTypeEventOrderByDateDesc(feed.getId(), TypeEventEnum.SCRAP_FEED_LAST_LINK);
 				for (SyndEntry news : newsList.getEntries()) {
 					if (!withOutLimit && after == null) {
 						// Vamos comprobando el link de la entrada con el enlace
 						// de
 						// la ultima noticia almacenada del feed
-						if (feed.getLastNewsLink() != null) {
+						if (lastSearch != null) {
 							// En caso de coincidencia (es decir que ya esta en
 							// el
 							// sistema) devolvemos la lista (puede estar vacia)
-							if (!feed.getLastNewsLink().isEmpty()
-									&& feed.getLastNewsLink().equals(
+							if (lastSearch.getInfo().equals(
 											news.getLink())) {
 								break;
 							} else if (isFirst) {
@@ -440,49 +240,34 @@ private News scrapingOneWithNEstandar(FeedForm feed) {
 					}
 					News newsData = getNewsWithRSS(feed, news, true);
 					if (!withOutLimit && after != null) {
-						if (newsData.getPubDate().before(after)) {
+						if (newsData.getPubDate().isBefore(after)) {
 							break;
 						}
 					}
 					listNews.add(newsData);
 				}
-				if (feed.getDateFirstNews() == null) {
-					feed.setDateFirstNews(newsList.getEntries()
-							.get(newsList.getEntries().size() - 1)
-							.getPublishedDate());
-				}
-				if (after == null && !withOutLimit) {
-					if (lastNews != null) {
-						feed = repositoryFeed.findOne(feed.getId());
-						feed.setLastNewsLink(lastNews);
-						repositoryFeed.save((Feed) feed);
-					}
-				}
 			}
 			return listNews;
 		} catch (MalformedURLException e) {
-			LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserrorgenerar") 
-					+ e.getMessage() + " -> " + feed.getNewsLink());
-			return null;
+			log.error("");//TODO
+			throw new FeedRssScrapException("",e);//TODO
 		} catch (IOException e) {
-			LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserroracces") 
-					+ e.getMessage() + " -> " + feed.getNewsLink());
-			return null;
+			log.error("");//TODO
+			throw new FeedRssScrapException("",e);//TODO
 		} catch (IllegalArgumentException | FeedException e) {
-			LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserrorinforss") 
-					+ e.getMessage() + " -> " + feed.getNewsLink());
-			return null;
+			log.error("");//TODO
+			throw new FeedRssScrapException("",e);//TODO
 		}
 	}
 
-	private List<News> scrapingWithOutRSS(Feed feed, Date after,
-			boolean withOutLimit) {
+	private List<News> scrapingWithOutRSS(Feed feed, LocalDateTime after,
+			boolean withOutLimit) throws FeedManualScrapException {
 		try {
 			List<News> listNews = new ArrayList<News>();
-			if (feed.getUrlNews() != null) {
-				Document doc = Jsoup.connect(feed.getUrlNews()).timeout(20000)
+			if (feed.getUrlScrap() != null) {
+				Document doc = Jsoup.connect(feed.getUrlScrap()).timeout(20000)
 						.get();
-				Elements newsLinks = doc.select(feed.getNewsLink());
+				Elements newsLinks = doc.select(feed.getUrlScrap());
 				boolean isFirst = true;
 				String lastNews = null;
 				News news = null;
@@ -492,16 +277,16 @@ private News scrapingOneWithNEstandar(FeedForm feed) {
 					// Titutlo de la noticia
 					String title = link.text();
 					news = getNewsWithOutRSS(feed, linkNews, title);
+					Event lastSearch = eventRepository.findOneByOriginIdAndTypeEventOrderByDateDesc(feed.getId(), TypeEventEnum.SCRAP_FEED_LAST_LINK);
 					if (!withOutLimit && after == null) {
 						// Vamos comprobando el link de la entrada con el enlace
 						// de
 						// la ultima noticia almacenada del feed
-						if (feed.getLastNewsLink() != null) {
+						if (lastSearch != null) {
 							// En caso de coincidencia (es decir que ya esta en
 							// el
 							// sistema) devolvemos la lista (puede estar vacia)
-							if (!feed.getLastNewsLink().isEmpty()
-									&& feed.getLastNewsLink().equals(linkNews)) {
+							if (lastSearch.getInfo().equals(linkNews)) {
 								break;
 							} else if (isFirst) {
 								lastNews = linkNews;
@@ -512,73 +297,58 @@ private News scrapingOneWithNEstandar(FeedForm feed) {
 							isFirst = false;
 						}
 					} else if (!withOutLimit && after != null) {
-						if (news.getPubDate().before(after)) {
+						if (news.getPubDate().isBefore(after)) {
 							break;
 						}
 					}
 					listNews.add(news);
 				}
-				if (feed.getDateFirstNews() == null) {
-					if (news != null)
-						feed.setDateFirstNews(news.getPubDate());
-				}
-				if (after == null && !withOutLimit) {
-					if (lastNews != null) {
-						feed.setLastNewsLink(lastNews);
-						repositoryFeed.save((Feed) feed);
-					}
-				}
 			}
 			return listNews;
 		} catch (IOException e) {
-			LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserroracces") 
-					+ e.getMessage() + " -> " + feed.getNewsLink());
-			return null;
+			log.error("");//TODO
+			throw new FeedManualScrapException("",e);//TODO
 		} catch (Exception e) {
-			LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserroraccesg") 
-					+ e.getMessage() + " -> " + feed.getNewsLink());
-			return null;
+			log.error("");//TODO
+			throw new FeedManualScrapException("",e);//TODO
 		}
 	}
 
-	private News scrapingOneWhitRSS(FeedForm feed) {
+	private News scrapingOneWhitRSS(Feed feed) throws FeedRssScrapException {
 		try {
 			List<News> listNews = new ArrayList<News>();
 			// open a connection to the rss feed
-			if (feed.getUrlNews() != null) {
-				URL url = new URL(feed.getUrlNews());
+			if (feed.getUrlScrap() != null) {
+				URL url = new URL(feed.getUrlScrap());
 				URLConnection conn = url.openConnection();
 				SyndFeedInput input = new SyndFeedInput();
 				SyndFeed newsList = input.build(new XmlReader(conn
 						.getInputStream()));
 				for (SyndEntry news : newsList.getEntries()) {
-					listNews.add(getNewsWithRSS(new Feed(feed), news, true));
+					listNews.add(getNewsWithRSS(feed, news, true));
 					break;
 				}
 			}
 			return listNews.get(0);
 		} catch (MalformedURLException e) {
-			LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserrorgenerar") 
-					+ e.getMessage() + " -> " + feed.getNewsLink());
-			return null;
+			log.error("");//TODO
+			throw new FeedRssScrapException("",e);//TODO
 		} catch (IOException e) {
-			LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserroracces") 
-					+ e.getMessage() + " -> " + feed.getNewsLink());
-			return null;
+			log.error("");//TODO
+			throw new FeedRssScrapException("",e);//TODO
 		} catch (IllegalArgumentException | FeedException e) {
-			LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserrorinforss") 
-					+ e.getMessage() + " -> " + feed.getNewsLink());
-			return null;
+			log.error("");//TODO
+			throw new FeedRssScrapException("",e);//TODO
 		}
 	}
 
-	private News scrapingOneWithOutRSS(FeedForm feed) {
+	private News scrapingOneWithOutRSS(Feed feed) throws FeedManualScrapException {
 		try {
 			List<News> listNews = new ArrayList<News>();
-			if (feed.getUrlNews() != null) {
-				Document doc = Jsoup.connect(feed.getUrlNews()).timeout(20000)
+			if (feed.getUrlScrap() != null) {
+				Document doc = Jsoup.connect(feed.getUrlScrap()).timeout(20000)
 						.get();
-				Elements newsLinks = doc.select(feed.getNewsLink());
+				Elements newsLinks = doc.select(feed.getUrlScrap());
 				for (Element link : newsLinks) {
 					// Enlace de la noticia
 					String linkNews = link.absUrl("href");
@@ -586,7 +356,7 @@ private News scrapingOneWithNEstandar(FeedForm feed) {
 						if (!linkNews.isEmpty()) {
 							// Titutlo de la noticia
 							String title = link.text();
-							listNews.add(getNewsWithOutRSS(new Feed(feed),
+							listNews.add(getNewsWithOutRSS(feed,
 									linkNews, title));
 							break;
 						}
@@ -595,13 +365,11 @@ private News scrapingOneWithNEstandar(FeedForm feed) {
 			}
 			return listNews.get(0);
 		} catch (IOException e) {
-			LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserroracces") 
-					+ e.getMessage() + " -> " + feed.getNewsLink());
-			return null;
+			log.error("");//TODO
+			throw new FeedManualScrapException("",e);//TODO
 		}
 	}
 
-	@SuppressWarnings("unused")
 	public News getNewsWithRSS(Feed feed, SyndEntry news, boolean accessLink) {
 		String link = news.getLink();
 		try {
@@ -609,23 +377,23 @@ private News scrapingOneWithNEstandar(FeedForm feed) {
 		} catch (MalformedURLException ex) {
 			URL url = null;
 			try {
-				url = new URL(feed.getUrlNews());
+				url = new URL(feed.getUrlScrap());
 				link = url.getProtocol().concat(url.getAuthority().concat(news.getLink()));
 			} catch (MalformedURLException e) {
 				e.printStackTrace();
 			}
 		}
 		String url = link;
-		NewsBuilder temp = new NewsBuilder(feed);
-		temp.setTitle(news.getTitle());
-		temp.setUrl(url);
-		temp.setPubDate(news.getPublishedDate());
+		News.NewsBuilder temp = News.builder();//TODO from Feed
+		temp.title(news.getTitle());
+		temp.url(url);
+		temp.pubDate(LocalDateTime.from(news.getPublishedDate().toInstant()));
 		String content = "";
 		for (SyndContent part : news.getContents()) {
 			content += part.getValue();
 		}
 		if (!content.equals("")) {
-			temp.setContent(content);
+			temp.content(content);
 		}
 		Document newsPage = null;
 		Integer count = 0;
@@ -644,30 +412,29 @@ private News scrapingOneWithNEstandar(FeedForm feed) {
 				break;
 			} catch (IOException e) {// En caso de error intentamos tres veces
 				count++;
-				LOGGER.info(LanguageLoad.getinstance().find("internal/feed/error/newserroracces")  + url
-						+ " intento " + count + "/3");
+				log.error("");//TODO
 				if (count == 3)
 					return null;
 			}
 		}
 		}
 		if (feed.getExtractionType() == null
-				|| ExtractionType.CSS_EXTRACTOR
+				|| ExtractionTypeEnum.CSS_EXTRACTOR
 						.equals(feed.getExtractionType())) {
 			if (feed.getSelectorContent() != null) {
 				if (!feed.getSelectorContent().isEmpty()) {
-					temp.setContent(feed.getSelectorContentMeta() ? newsPage
+					temp.content(feed.getSelectorContentMeta() ? newsPage
 							.select(feed.getSelectorContent()).attr("content")
 							: newsPage.select(feed.getSelectorContent()).text());
 				}
 			}
-		} else if (ExtractionType.RSS_DESCRIPTION
+		} else if (ExtractionTypeEnum.RSS_DESCRIPTION
 				.equals(feed.getExtractionType()) || !accessLink) {
 			if (news.getDescription()!=null)
-				temp.setContent(news.getDescription().getValue());
-		} else if (ExtractionType.ALL_CONTENT
+				temp.content(news.getDescription().getValue());
+		} else if (ExtractionTypeEnum.ALL_CONTENT
 				.equals(feed.getExtractionType())) {
-			temp.setContent(newsPage.text());
+			temp.content(newsPage.text());
 		} else {
 			BoilerpipeExtractor extractor = CommonExtractors.ARTICLE_EXTRACTOR;
 			switch (feed.getExtractionType()) {
@@ -688,23 +455,21 @@ private News scrapingOneWithNEstandar(FeedForm feed) {
 				break;
 			}
 			try {
-				temp.setContent(extractor.getText(newsPage.outerHtml()));
+				temp.content(extractor.getText(newsPage.outerHtml()));
 			} catch (BoilerpipeProcessingException e) {
-				LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserrorextract"));
-				;
-				temp.setContent(LanguageLoad.getinstance().find("internal/feed/error/newserrorextract"));
+				log.error("");//TODO
 			}
 		}
 		if (feed.getSelectorPubDate() != null) {
 			if (!feed.getSelectorPubDate().isEmpty()) {
-				temp.setPubDate(feed.getSelectorPubDateMeta() ? newsPage
+				temp.pubDate(LocalDateTime.parse(feed.getSelectorPubDateMeta() ? newsPage
 						.select(feed.getSelectorPubDate()).attr("content")
-						: newsPage.select(feed.getSelectorPubDate()).text());
+						: newsPage.select(feed.getSelectorPubDate()).text(),DateTimeFormatter.ofPattern(feed.getDateFormat())));
 			}
 		}
 		if (feed.getSelectorTitle() != null) {
 			if (!feed.getSelectorTitle().isEmpty()) {
-				temp.setTitle(feed.getSelectorTitleMeta() ? newsPage.select(
+				temp.title(feed.getSelectorTitleMeta() ? newsPage.select(
 						feed.getSelectorTitle()).attr("content") : newsPage
 						.select(feed.getSelectorTitle()).text());
 			} 
@@ -730,32 +495,28 @@ private News scrapingOneWithNEstandar(FeedForm feed) {
 				break;
 			} catch (IOException e) {// En caso de error intentamos tres veces
 				count++;
-				LOGGER.info(LanguageLoad.getinstance().find("internal/feed/error/newserroracces")  + linkNews
-						+ LanguageLoad.getinstance().find("internal/feed/error/newserroraccesintent") 
-						+ count + 
-						LanguageLoad.getinstance().find("internal/feed/error/newserroraccesintentjump") 
-						);
+				log.warn("");//TODO
 				if (count == 3)
 					return null;
 			}
 		}
-		NewsBuilder temp = new NewsBuilder(feed);
-		temp.setUrl(linkNews);
-		temp.setTitle(title);
+		News.NewsBuilder temp = News.builder();//TODO from Feed
+		temp.url(linkNews);
+		temp.title(title);
 		if (feed.getExtractionType() == null
-				|| ExtractionType.CSS_EXTRACTOR
+				|| ExtractionTypeEnum.CSS_EXTRACTOR
 						.equals(feed.getExtractionType())) {
 			if (feed.getSelectorContent() != null) {
 				if (!feed.getSelectorContent().isEmpty()) {
-					temp.setContent(feed.getSelectorContentMeta() ? newsPage
+					temp.content(feed.getSelectorContentMeta() ? newsPage
 							.select(feed.getSelectorContent()).attr("content")
 							: newsPage.select(feed.getSelectorContent()).text());
 				}
 			}
-		}  else if (ExtractionType.ALL_CONTENT
-				.equals(feed.getExtractionType()) || ExtractionType.RSS_DESCRIPTION
+		}  else if (ExtractionTypeEnum.ALL_CONTENT
+				.equals(feed.getExtractionType()) || ExtractionTypeEnum.RSS_DESCRIPTION
 				.equals(feed.getExtractionType())) {
-			temp.setContent(newsPage.text());
+			temp.content(newsPage.text());
 		} else {
 			BoilerpipeExtractor extractor = CommonExtractors.ARTICLE_EXTRACTOR;
 			switch (feed.getExtractionType()) {
@@ -776,31 +537,28 @@ private News scrapingOneWithNEstandar(FeedForm feed) {
 				break;
 			}
 			try {
-				temp.setContent(extractor.getText(newsPage.outerHtml()));
+				temp.content(extractor.getText(newsPage.outerHtml()));
 			} catch (BoilerpipeProcessingException e) {
-				LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserrorextract")
-						);
-				;
-				temp.setContent(LanguageLoad.getinstance().find("internal/feed/error/newserrorextract"));
+				log.error("");//TODO
 			}
 		}
 		if (feed.getSelectorPubDate() != null) {
 			if (!feed.getSelectorPubDate().isEmpty()) {
-				temp.setPubDate(feed.getSelectorPubDateMeta() ? newsPage
+				temp.pubDate(LocalDateTime.parse(feed.getSelectorPubDateMeta() ? newsPage
 						.select(feed.getSelectorPubDate()).attr("content")
-						: newsPage.select(feed.getSelectorPubDate()).text());
+						: newsPage.select(feed.getSelectorPubDate()).text(),DateTimeFormatter.ofPattern(feed.getDateFormat())));
 			}
 		}
 		if (feed.getSelectorTitle() != null) {
 			if (!feed.getSelectorTitle().isEmpty()) {
-				temp.setTitle(feed.getSelectorTitleMeta() ? newsPage.select(
+				temp.title(feed.getSelectorTitleMeta() ? newsPage.select(
 						feed.getSelectorTitle()).attr("content") : newsPage
 						.select(feed.getSelectorTitle()).text());
 			} else {
-				temp.setTitle(newsPage.title());
+				temp.title(newsPage.title());
 			}
 		} else {
-			temp.setTitle(newsPage.title());
+			temp.title(newsPage.title());
 		}
 		return temp.build();
 	}
@@ -809,64 +567,6 @@ private News scrapingOneWithNEstandar(FeedForm feed) {
 	public News getNewsFromSite(String link, Feed feed) {
 		return getNewsWithOutRSS(feed, link, link);
 	}
-	
-	@Override
-	public List<News> scrapingHistoric(Feed feed, InputStream xml) {
-		try {
-			List<News> listNews = new ArrayList<News>();
-			// open a connection to the rss feed
-			if (feed.getUrlNews() != null) {
-				SyndFeedInput input = new SyndFeedInput();
-				SyndFeed newsList = input.build(new XmlReader(xml));
-				for (SyndEntry news : newsList.getEntries()) {
 
-					News newsData = getNewsWithRSS(feed, news, false);
-					listNews.add(newsData);
-				}
-			}
-			feed = repositoryFeed.findOne(feed.getId());
-			feed.setUltimaRecuperacion(new Timestamp(System.currentTimeMillis()));
-			feed.setNumNewNews(listNews != null ? listNews.size() : 0);
-			repositoryFeed.save((Feed) feed);
-			if (listNews != null) {
-				Date today = new Date(System.currentTimeMillis());
-				ScrapStatistics statistics = statisticsRepository.findOne(today);
-				if (statistics != null) {
-					statistics.setTotal(statistics.getTotal() + listNews.size());
-				} else {
-					statistics = new ScrapStatistics(today, listNews.size());
-				}
-				statisticsRepository.save(statistics);
-			}
-			for (News news : listNews) {
-				try {
-					if (news!=null)
-						newsRepository.save(news);
-					else
-						LOGGER.warn(LanguageLoad.getinstance().find("internal/feed/warn/newserrorhisnull") + feed.getName());
-					//""
-				}
-				catch (Exception ex) {
-					LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserrorhisnullg") + feed.getName() + LanguageLoad.getinstance().find("internal/feed/error/newserrorhisnullglink") + news.getUrl());
-				}
-			}
-			newsIndexService.markNewNews(feed);
-			LOGGER.info(LanguageLoad.getinstance().find("internal/feed/info/newshistoricrec")
-					+ feed.getName());
-			return listNews;
-		} catch (MalformedURLException e) {
-			LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserrorgenerar") 
-					+ e.getMessage() + " -> " + feed.getNewsLink());
-			return null;
-		} catch (IOException e) {
-			LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserroracces") 
-					+ e.getMessage() + " -> " + feed.getNewsLink());
-			return null;
-		} catch (IllegalArgumentException | FeedException e) {
-			LOGGER.error(LanguageLoad.getinstance().find("internal/feed/error/newserrorinforss") 
-					+ e.getMessage() + " -> " + feed.getNewsLink());
-			return null;
-		}
-	} 
 
 }

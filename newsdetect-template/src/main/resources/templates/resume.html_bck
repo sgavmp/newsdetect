@@ -212,7 +212,7 @@
 			if (risks.length > 0) {
 				for (i = 0; i < (risks.length) ; i++) {
 					col1[i+1] = risks[i].title;
-					col2[i+1] = risks[i].newsDetect!=null?risks[i].newsDetect.length:0;
+					col2[i+1] = risks[i].detectedNews!=null?risks[i].detectedNews.length:0;
 					links[i] = url + risks[i].id;
 			    }
 			var chartRisks = c3.generate({

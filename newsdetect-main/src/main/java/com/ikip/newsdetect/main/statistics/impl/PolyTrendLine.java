@@ -1,11 +1,9 @@
 package com.ikip.newsdetect.main.statistics.impl;
 
-import es.ucm.visavet.gbf.app.LanguageLoad;
-
 public class PolyTrendLine extends OLSTrendLine {
     final int degree;
     public PolyTrendLine(int degree) {
-        if (degree < 0) throw new IllegalArgumentException(LanguageLoad.getinstance().find("internal/trend/error/negative"));
+//        if (degree < 0) throw new IllegalArgumentException(LanguageLoad.getinstance().find("internal/trend/error/negative"));
         this.degree = degree;
     }
     protected double[] xVector(double x) { // {1, x, x*x, x*x*x, ...}

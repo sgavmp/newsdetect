@@ -1,9 +1,8 @@
 package com.ikip.newsdetect.main.service;
 
-import es.ucm.visavet.gbf.app.LanguageLoad;
-import es.ucm.visavet.gbf.app.domain.UserDetailsImpl;
-import es.ucm.visavet.gbf.app.domain.Usuario;
-import es.ucm.visavet.gbf.app.repository.UsuarioRepository;
+import com.ikip.newsdetect.main.repository.UsuarioRepository;
+import com.ikip.newsdetect.main.security.UserDetailsImpl;
+import com.ikip.newsdetect.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -19,9 +18,9 @@ public class UserDetailServiceImpl implements UserDetailsService {
 	public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
 		
 		if (username==null||username.isEmpty())
-			throw new UsernameNotFoundException(LanguageLoad.getinstance().find("web/login/error/usernameempty"));
+			throw new UsernameNotFoundException("Not found");
 		
-		Usuario usuario = usuarioRepository.findByUserName(username);
+		User usuario = usuarioRepository.findByUserName(username);
 		UserDetailsImpl userDetails = new UserDetailsImpl(username, usuario.getPassword(), usuario.getEmail(), usuario.isAdmin());
 		return userDetails;
 	}

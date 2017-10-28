@@ -1,0 +1,26 @@
+gbfood:
+  resources:
+    crawler: c:/opt/gf/
+    general: c:/opt/gf/tmp/
+    simy: simy.xml
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+  thymeleaf:
+    cache: false
+  datasource:
+    url: jdbc:mysql://localhost:3306/news_detector?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true
+    init-sql: "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;"
+    username: root
+    password: root
+    driverClassName: com.mysql.jdbc.Driver
+    continueOnError: true
+    testWhileIdle: true
+    timeBetweenEvictionRunsMillis: 18000
+    validationQuery: SELECT 1
+
+newsdetect:
+  index:
+    path: /Users/sergio/index/
