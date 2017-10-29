@@ -1,13 +1,12 @@
 package com.ikip.newsdetect.main.repository;
 
 import com.ikip.newsdetect.model.Alert;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.repository.PagingAndSortingRepository;
-import org.springframework.stereotype.Repository;
+import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
 import java.util.Set;
 
-@Repository
-public interface AlertRepository extends JpaRepository<Alert, Long> {
+@RepositoryRestResource
+public interface AlertRepository extends PagingAndSortingRepository<Alert, Long> {
 	Set<Alert> findAllByOrderByTitleAsc();
 }

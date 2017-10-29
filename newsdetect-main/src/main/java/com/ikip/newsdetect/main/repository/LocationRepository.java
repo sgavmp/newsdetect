@@ -3,10 +3,12 @@ package com.ikip.newsdetect.main.repository;
 import com.ikip.newsdetect.model.Location;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.CrudRepository;
+import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
 import java.util.List;
 import java.util.Set;
 
+@RepositoryRestResource
 public interface LocationRepository extends CrudRepository<Location, Long> {
 
 	public Set<Location> findAllByOrderByNameAsc();

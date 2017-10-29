@@ -18,7 +18,6 @@ import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-@Service
 public class SchedulerService {
 	
 	private final static Logger LOGGER = Logger.getLogger(SchedulerService.class);

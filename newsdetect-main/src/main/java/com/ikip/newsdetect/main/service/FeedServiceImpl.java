@@ -9,8 +9,6 @@ import com.ikip.newsdetect.main.repository.NewsDetectRepository;
 import com.ikip.newsdetect.main.scheduler.SchedulerService;
 import com.ikip.newsdetect.model.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.Pageable;
-import org.springframework.stereotype.Service;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -19,7 +17,6 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-@Service
 public class FeedServiceImpl implements FeedService {
 	
 	@Autowired

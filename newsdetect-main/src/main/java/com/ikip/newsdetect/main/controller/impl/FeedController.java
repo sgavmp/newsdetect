@@ -19,8 +19,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-@Controller
-@RequestMapping("/feeds")
+
 public class FeedController extends BaseController {
 
 	@Autowired

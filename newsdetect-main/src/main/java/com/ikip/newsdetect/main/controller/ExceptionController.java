@@ -1,27 +1,26 @@
 package com.ikip.newsdetect.main.controller;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.ikip.newsdetect.exception.Errors;
+import com.ikip.newsdetect.exception.dto.ExceptionDto;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.servlet.ModelAndView;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
 
 @ControllerAdvice
+@RestController
+@Slf4j
 public class ExceptionController {
-	
-	Logger LOGGER = LoggerFactory.getLogger(getClass());
 
 	@ExceptionHandler(value = Exception.class)
-    public ModelAndView defaultErrorHandler(HttpServletRequest req, Exception e) throws Exception {
-        // Otherwise setup and send the user to a default error-view.
-		e.printStackTrace();
-        ModelAndView mav = new ModelAndView();
-        mav.addObject("exception", e);
-        mav.addObject("url", req.getRequestURL());
-        mav.setViewName("error");
-        return mav;
+    public ExceptionDto defaultErrorHandler(HttpServletRequest req, Exception e) throws Exception {
+        log.error("Catch error",e);
+        ExceptionDto dto = new ExceptionDto();
+        dto.setCode(Errors.SERVER_ERROR);
+        dto.setDescription(e.getMessage());
+        return dto;
     }
 	
 }

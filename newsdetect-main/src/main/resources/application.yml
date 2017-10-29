@@ -2,6 +2,7 @@ datetime:
   extra:
     masks: dd/MM/yyyy
 
+
 spring:
   application:
     name: veterinaria
@@ -11,3 +12,8 @@ spring:
     time-between-eviction-runs-millis: 18000
     init-sql: "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;"
     validationQuery: SELECT 1
+  data:
+    rest:
+      detection-strategy: annotated
+      default-page-size:
+      base-path: /api

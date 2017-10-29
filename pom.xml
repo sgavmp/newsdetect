@@ -25,13 +25,12 @@
 	</properties>
 
 	<modules>
+		<module>newsdetect-exception</module>
 		<module>newsdetect-main</module>
 		<module>newsdetect-model</module>
-		<module>newsdetect-template</module>
 		<module>newsdetect-static</module>
 		<module>newsdetect-extractor</module>
 		<module>newsdetect-find</module>
-		<module>newsdetect-topic</module>
 	</modules>
 
 </project>

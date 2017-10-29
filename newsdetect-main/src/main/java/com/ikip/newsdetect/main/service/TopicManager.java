@@ -4,7 +4,6 @@ import com.ikip.newsdetect.main.repository.TopicRepository;
 import com.ikip.newsdetect.model.Topic;
 import com.ikip.newsdetect.topic.manager.ITopicsManager;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
@@ -13,7 +12,6 @@ import java.io.UnsupportedEncodingException;
 import java.util.HashSet;
 import java.util.Set;
 
-@Service
 public class TopicManager implements ITopicsManager {
 
 	@Autowired

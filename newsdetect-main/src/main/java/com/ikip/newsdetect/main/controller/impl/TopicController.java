@@ -6,7 +6,6 @@ import com.ikip.newsdetect.main.service.TopicManager;
 import com.ikip.newsdetect.model.Topic;
 import com.ikip.newsdetect.topic.validator.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,8 +17,7 @@ import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 
-@Controller
-@RequestMapping("/topic")
+
 public class TopicController extends BaseController {
 
 	@Autowired

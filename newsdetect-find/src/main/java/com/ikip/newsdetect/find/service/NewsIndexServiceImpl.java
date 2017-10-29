@@ -23,7 +23,6 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import javax.transaction.Transactional;
@@ -35,7 +34,6 @@ import java.util.*;
 //import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 
 @Slf4j
-@Service
 public class NewsIndexServiceImpl implements NewsIndexService{
 
 

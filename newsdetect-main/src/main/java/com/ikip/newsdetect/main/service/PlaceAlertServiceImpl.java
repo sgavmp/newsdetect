@@ -4,12 +4,10 @@ import com.ikip.newsdetect.find.service.NewsIndexService;
 import com.ikip.newsdetect.main.repository.LocationRepository;
 import com.ikip.newsdetect.model.Location;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.util.Set;
 
-@Service
 public class PlaceAlertServiceImpl {
 	
 	@Autowired

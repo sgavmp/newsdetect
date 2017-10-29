@@ -10,7 +10,6 @@ import com.ikip.newsdetect.model.Alert;
 import com.ikip.newsdetect.model.DetectedNews;
 import com.ikip.newsdetect.topic.validator.*;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -26,8 +25,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.HashMap;
 import java.util.Map;
 
-@Controller
-@RequestMapping("/alerts")
+
 public class AlertController extends BaseController {
 	
 	private static String FOLDER = "alerts";
